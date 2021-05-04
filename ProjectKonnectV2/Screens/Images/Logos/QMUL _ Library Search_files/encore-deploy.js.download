@@ -1,0 +1,3516 @@
+/**
+ * @version $Id$ $Rev: 256102 $ $Date: 2016-06-14 11:57:45 +0000 (Tue, 14 Jun 2016) $
+ */
+
+/*Global Vars*/
+var IIIGLOBALS = {};
+
+function sendKeepAliveRequest(resetURL) {
+    if(keepAliveCount < keepAliveMaxRequests)
+    {
+        tapestry.bind({
+            url: keepAliveURL,
+            load: function(){keepAliveCount++;},
+            error:errorHandler,
+            preventCache: true,
+            mimetype: "text/plain"
+        });
+    }
+    else
+    {
+        clearInterval(keepAliveTimerId);
+        window.location = resetURL;
+    }
+
+}
+
+
+$j(document).ready(function () {
+    $j('#resultsAnyComponent a[id^="checkAvailabilityDirectLink"]').on('click', function (event) {
+        event.preventDefault();
+        var $this = $j(this);
+        $this.html('<div class="loader"><img src="resources/gold/images/loading-small.gif"></div>');
+    });
+    $j('#bookCartPageIdAnyComponent a[id^="checkAvailabilityDirectLink"]').on('click', function (event) {
+        event.preventDefault();
+        var $this = $j(this);
+        $this.html('<div class="loader"><img src="resources/gold/images/loading-small.gif"></div>');
+    });
+});
+
+function errorHandler( type, error )
+{
+    var msg = "Something went horribly wrong ...\n" +
+        error.message;
+}
+function initKeepAlive(resetURL)
+{
+    if(keepAliveInterval > 0)
+    {
+        if(keepAliveTimerId)
+        {
+            clearInterval(keepAliveTimerId);
+        }
+        keepAliveTimerId =
+            setInterval('sendKeepAliveRequest(\''+resetURL+'\')',keepAliveInterval);
+    }
+}
+
+var pagePosition = 0;
+var overlayDisplay = false;
+function overlayBack()
+{
+    if( !document.getElementById("overlay") )
+    {
+        var overElem = document.createElement("div");
+        overElem.setAttribute("id", "overlay" );
+        if(overlayDisplay)
+            overElem.style.display = "";
+        else
+            overElem.style.display = "none";
+        try{
+            document.getElementsByTagName("body")[0].appendChild(overElem);
+        }catch(ex){
+            alert(ex+":"+ex.message);
+        }
+    }
+}
+function hideOverlay()
+{
+    overlayDisplay = false;
+    var oOverLayDiv = document.getElementById("overlay");
+    oOverLayDiv.style.display = "none";
+    scroll(0,pagePosition);
+}
+function showOverlay()
+{
+    overlayDisplay = true;
+    var over = document.getElementById("overlay");
+    if(over)
+        over.style.display = "";
+    pagePosition = document.body.scrollTop;
+    scroll(0,0);
+}
+var hideDialog = new Object();
+hideDialog.responseComplete = function(responseElements)
+{
+    hideOverlay();
+}
+var showDialog = new Object();
+showDialog.responseComplete = function(responseElements)
+{
+    showOverlay();
+}
+function showAllItems(link)
+{
+    var itemName = link.hash.replace("#","");
+    showMoreOverlay(itemName) ;
+}
+function hideAllItems(link)
+{
+    var itemName = link.hash.replace("#","");
+    hideMoreOverlay(itemName) ;
+}
+function showMoreOverlay(sDivName)
+{
+    showOverlay();
+    var oDiv = document.getElementById(sDivName);
+    var oCopy = oDiv.cloneNode(true);
+    oCopy.id = sDivName+"clone";
+    document.getElementsByTagName("body")[0].appendChild(oCopy);
+    document.getElementById(sDivName+"clone").className = "overlayContent";
+    document.getElementById(sDivName+"clone").style.display="";
+}
+function hideMoreOverlay(sDivName)
+{
+    document.getElementById(sDivName+"clone").style.display="none";
+    hideOverlay();
+}
+function findPosX(obj)
+{
+    var curleft = 0;
+    if(obj.offsetParent)
+        while(1)
+        {
+            curleft += obj.offsetLeft;
+            if(!obj.offsetParent)
+                break;
+            obj = obj.offsetParent;
+        }
+    else if(obj.x)
+        curleft += obj.x;
+    return parseInt(curleft);
+}
+function makeImageMenu(obj)
+{
+    if(obj && obj.ResultSet && obj.ResultSet.Result.length > 0)
+    {
+        var div = document.getElementById("imagemenu");
+        var ul = document.createElement("UL");
+        for(var i=0;result=obj.ResultSet.Result[i];i++)
+        {
+            var thumb = result.Thumbnail;
+            if((typeof thumb== 'object') && (typeof result == 'object'))
+            {
+                var li = document.createElement("LI");
+                li.style.position = "relative";
+                li.style.zIndex = "1";
+                li.onmouseover = function() {
+                    this.style.zIndex = "3";
+                }
+                li.onmouseout = function() {
+                    this.style.zIndex = "1";
+                }
+                var a = document.createElement("A");
+                a.href = yahooURL;
+                a.target = "_blank";
+                var img = document.createElement("IMG");
+                img.src = thumb.Url;
+                img.onmouseover = function(){
+                    var imgXPos =  findPosX(this);
+                    var imgWidth = parseInt(thumb.Width);
+                    var totalWidth = imgXPos+imgWidth;
+                    var winWidth = parseInt(document.body.clientWidth);
+                    if(totalWidth > winWidth)
+                    {
+                        var rightMargin = (totalWidth - winWidth);
+                        this.style.left = "-"+rightMargin+"px";
+                    }
+                    this.style.height= thumb.Height+"px";
+                    this.style.width= thumb.Width+"px";
+                    this.style.position = "absolute";
+                    this.style.zIndex = "3";
+                }
+                img.onmouseout = function(){
+                    this.style.left = "auto";
+                    this.style.height = "49px";
+                    this.style.width = "49px";
+                    this.style.position = "relative";
+                    this.style.zIndex = "1";
+                }
+
+                try{
+                    a.appendChild(img);
+                    li.appendChild(a);
+                    ul.appendChild(li);
+                }catch(ex){
+                    alert(ex);
+                }
+            }
+        }
+        try{
+            div.appendChild(ul);
+        }catch(ex){
+            alert(ex)
+        }
+    }
+}
+
+function createAddReviewWindow( url )
+{
+    this.name = "catalog";
+    resourceWindow = top.open( url, 'ResourceWindow','resizable=yes,scrollbars=yes,width=600,height=400');
+    if( resourceWindow.opener == null )
+    {
+        resourceWindow.opener = window;
+    }
+    resourceWindow.focus();
+    return false;
+}
+
+function patronPopupWindow( url )
+{
+    this.name = "catalog";
+    resourceWindow = top.open( url, 'ResourceWindow','resizable=yes,scrollbars=yes,width=600,height=400');
+    if( resourceWindow.opener == null )
+    {
+        resourceWindow.opener = window;
+    }
+    resourceWindow.focus();
+    return false;
+}
+
+function createInnreachRequestWindow(url) {
+    this.name = "catalog";
+    resourceWindow = top.open(url.replace('/search', '/externalsearch'), 'ResourceWindow', 'resizable=yes,scrollbars=yes,width=600,height=400');
+    if (resourceWindow.opener == null) {
+        resourceWindow.opener = window;
+    }
+    resourceWindow.focus();
+}
+
+//Used to simulate maxWidth  css property for IE6.  This can be used for max-width properties that only need to be set once per page, lIke the Link+ logo. The property for the CSS expression will then get overwritten.
+function  maxPixelWidth(elem, maxWidth) {
+    elem.style.width =  elem.offsetWidth > maxWidth ?  maxWidth  + 'px'  :  elem.offsetWidth;
+}
+
+//see call c1117016a
+function toggleArea(areaId)
+{
+    var area = document.getElementById(areaId);
+    if (area == null)
+        return;
+
+    if (area.style.display == 'inline')
+    {
+        area.style.display = "none";
+    }
+    else
+    {
+        area.style.display = "inline";
+    }
+}
+
+/* From prototype.js */
+document.getElementsByClassName = function(className) {
+    var children = document.getElementsByTagName('*') || document.all;
+    var elements = new Array();
+
+    for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        var classNames = child.className.toString().split(' ');
+        for (var j = 0; j < classNames.length; j++) {
+            if (classNames[j] == className) {
+                elements.push(child);
+                break;
+            }
+        }
+    }
+    return elements;
+}
+function advSearchGenerateSearchQuery()
+{
+    var searchForm = document.getElementById("searchFormComponent");
+    var queryString = document.getElementById("queryString");
+    var limitsTypeArray = new Array();
+    var limitsOptionsArray = new Array();
+
+    //Remove search box default message styles
+    if (queryString) {
+        dojo.removeClass(queryString, "advSearchDefault");
+        dojo.addClass(queryString, "advSearchQueryString customSecondaryText");
+    }
+
+    if( searchForm != null) {
+        var queryStringBuf = "";
+        var searchableSliceMap = new Array();
+        var indexMap = new Array();
+
+        // Go through searchable slices first
+        for( var i = 0; i < 100; i++ ) {
+            var searchTypeEle = document.getElementById("searchType_" + i);
+            var searchTermEle = document.getElementById("searchTerm_" + i);
+            var operatorEle = document.getElementById("operator_" + i);
+
+            if (searchTypeEle != null && searchTermEle != null) {
+                var searchType = searchTypeEle.value;
+                var searchTerm = searchTermEle.value;
+                var operator = "";
+
+                if (searchTerm == "")
+                    continue;
+
+                if (operatorEle != null) {
+                    operatorStr = operatorEle.value;
+                    if (operatorStr == "AND" || i == 0) {
+                        operator = "";
+                    } else if (operatorStr == "OR") {
+                        operator = "| ";
+                    } else if (operatorStr == "NOT") {
+                        operator = "-";
+                    }else {
+                        operator = "?";
+                    }
+                }
+
+                if(searchType == "")
+                {
+                    searchType="k";
+                }
+
+                // Setup index for each slice
+                if (indexMap[searchType] == null || typeof indexMap[searchType] == 'undefined') {
+                    indexMap[searchType] = 0;
+                }
+
+                // AND operators should start a new phrase
+                if (operator == "") {
+                    indexMap[searchType] = indexMap[searchType] + 1;
+                }
+
+                // Initialize current slice buffer
+                var sliceKey = indexMap[searchType] + searchType;
+                if (searchableSliceMap[sliceKey] == null || typeof searchableSliceMap[sliceKey] == 'undefined') {
+                    searchableSliceMap[sliceKey] = "";
+                }
+
+                searchTerm = dojo.trim(searchTerm);
+                var indexOfSpace = searchTerm.indexOf(' ');
+                if (indexOfSpace > 0) {
+                    searchableSliceMap[sliceKey] += operator + "(" + searchTerm + ") ";
+                } else {
+                    searchableSliceMap[sliceKey] += operator + searchTerm + " ";
+                }
+            } else {
+                break;    // done processing searchable slices
+            }
+        }
+
+        // Use parsed results from searchableSliceMap to build the query string
+        for (var sliceKey in searchableSliceMap) {
+            // we should ensure that `sliceKey` is our added key.
+            if (!searchableSliceMap.hasOwnProperty(sliceKey)) {
+                continue;
+            }
+
+            var buf = dojo.trim(searchableSliceMap[sliceKey]);
+
+            // Move any starting operator to the front of the slice
+            var operator = "";
+            var endIndex = 0;
+            if (buf.charAt(0) == "|")
+                endIndex = 2;
+            else if (buf.charAt(0) == "-")
+                endIndex = 1;
+
+            if (endIndex > 0) {
+                operator = buf.substring(0, endIndex);
+                buf = buf.substring(endIndex);
+            }
+
+            if(sliceKey.charAt(1)=="k")
+            {
+                sliceKey=sliceKey.substr(0,1);
+            }
+
+            // Check if we need to add external parenthesis
+            if (buf.charAt(0) == "(" && buf.charAt(buf.length-1) == ")"
+                && buf.substr(1, buf.length-2).indexOf(')') == -1) {
+                queryStringBuf += operator + sliceKey.substr(1) + buf + " ";
+            } else {
+                queryStringBuf += operator + sliceKey.substr(1) + "(" + buf + ") ";
+            }
+        }
+    }
+
+    // Now, start processing limits
+    // First check to see if the limits section has been loaded
+    var limitWrapper = document.getElementById("limitsBuilderAnyComponent");
+    if (limitWrapper) {
+        var index = 0;
+        // for( var i = 0; i < 100; i++ ) {
+        //changing the limit from 100 to 10 since this time we have only 6 limits and we are continuing the loop to fix ENCORE-3531
+        for( var i = 0; i < 10; i++ ) {
+            var limitTypeEle = document.getElementById("limitType_" + i);
+            var limitValueEle = document.getElementById("limitValue_" + i);
+
+            if (limitTypeEle != null && limitValueEle != null) {
+                var limitType = limitTypeEle.value.substring(1);
+                var limitValue = limitValueEle.value;
+
+                // Ignore empty values (anything selected as "ANY" should be ignored)
+                if (limitValue == "")
+                    continue;
+
+                // Check if we have already encountered this limit
+                var foundIndex = -1;
+                for (var j=0; j < limitsTypeArray.length; j++) {
+                    if (limitsTypeArray[j] == limitType) {
+                        foundIndex = j;
+                        break;
+                    }
+                }
+
+                if (foundIndex == -1) {
+                    limitsTypeArray[index] = limitType;
+                    limitsOptionsArray[index++] = limitValue;
+                } else {
+                    limitsOptionsArray[foundIndex] += " | " + limitValue;
+                }
+            } /*else {
+                   break;     done processing limits
+			     commenting the break to fix ENCORE-3531
+				} */
+        }
+
+        // Add limits to query string now
+        for (i=0; i<limitsTypeArray.length; i++) {
+            var indexOfPipe = limitsOptionsArray[i].indexOf('|');
+            if (indexOfPipe == -1) {
+                queryStringBuf += limitsTypeArray[i] + limitsOptionsArray[i] + " ";
+            } else {
+                queryStringBuf += limitsTypeArray[i] + "(" + limitsOptionsArray[i] + ") ";
+            }
+        }
+
+        // Add date range
+        var yearLimitAliasEle = document.getElementById("yearAlias");
+        if (yearLimitAliasEle != null) {
+            var startYear = document.getElementById("startYear").value;
+            var endYear = document.getElementById("endYear").value;
+            if (startYear != "" || endYear != "")
+                queryStringBuf += yearLimitAliasEle.value.substring(1) + "[" + startYear + "-" + endYear + "] ";
+        }
+
+        // Add publisher
+        var publisherLimitAliasEle = document.getElementById("publisherAlias");
+        if (publisherLimitAliasEle != null) {
+            var publisher = document.getElementById("publisher").value;
+            if (publisher != "")
+                queryStringBuf += publisherLimitAliasEle.value.substring(1) + "(" + publisher + ")";
+        }
+    }
+
+    // Trim beginning and trailing spaces before returning it
+    queryString.value = dojo.trim(queryStringBuf);
+
+    //programatically fire change event
+    if ("createEvent" in document) {
+        var evt = document.createEvent("HTMLEvents");
+        evt.initEvent("change", false, true);
+        queryString.dispatchEvent(evt);
+    }
+    else {
+        queryString.fireEvent("onchange");
+    }
+}
+
+function redirectToAdvancedSearch(baseURL) {
+    var searchString = document.getElementById("searchString").value;
+
+    document.location = baseURL + "&searchString=" + encodeURIComponent(searchString);
+}
+
+function toggleAccountSelect(linkElem, forceClose) {
+    var $as = $j("#accountSelect");
+    var $trigger = $j(linkElem);
+    if ($as.css("display") == "none" && !forceClose) {
+        if (IIIGLOBALS.isRTL){
+            $as.css("left",$trigger.position().left + $trigger.width() + $as.width() + 25 + "px").css("top", $trigger.position().top - 25 + "px");
+        } else {
+            $as.css("left",$trigger.position().left + $trigger.width() + 25 + "px").css("top", $trigger.position().top - 25 + "px");
+        }
+        $as.fadeIn("fast");
+    } else {
+        $as.fadeOut("fast");
+    }
+}
+
+function addTableWidthStyle(max) {
+    var mcadiv = dojo.byId("mainContentArea");
+    if(!mcadiv)
+        mcadiv = dojo.byId("contentColumn");
+    if(mcadiv){
+        var mca = mcadiv.offsetWidth -109;
+        var maxhr = parseInt(mca*0.9,0);
+        if(!dojo.byId("tableStyle")){    //check for existing fake style sheet
+            var fakeTag = document.createElement ("style");
+            fakeTag.id = "tableStyle";
+            fakeTag.title = "tableStyle";
+            var head = document.getElementsByTagName ("head")[0];
+            head.appendChild (fakeTag);
+        }
+        for(i=0;i < document.styleSheets.length;i++){
+            if(document.styleSheets[i].title == "tableStyle")
+                fs = document.styleSheets[i];
+        }
+        if(!fs)
+            return;
+        if (fs.addRule) {  //ie
+            if(fs.rules.length > 0 && (fs.rules[0].style.maxWidth === mca+"px"))  //exit if the rule is already there
+                return;
+            while(fs.rules.length > 0)
+                fs.removeRule(0);
+            fs.addRule ("div.content table", "max-width:"+mca+"px",0);
+            fs.addRule ("div.content td", "max-width:"+maxhr+"px",1);
+            fs.addRule ("div.content hr", "max-width:"+maxhr+"px",2);
+            fs.addRule (".searchPage div.toggleContent", "max-width:"+maxhr+"px",3);
+        }
+        else {    //everyone else
+            if(fs.cssRules.length > 0 && (fs.cssRules[0].style.maxWidth === mca+"px")) //exit if the rule is already there
+                return;
+            while(fs.cssRules.length > 0)
+                fs.deleteRule(0);
+            fs.insertRule ("div.content table {max-width:"+mca+"px;}",0);
+            fs.insertRule ("div.content td {max-width:"+maxhr+"px;}",1);
+            fs.insertRule ("div.content hr {max-width:"+maxhr+"px;}",2);
+            fs.insertRule (".searchPage div.toggleContent {max-width:"+maxhr+"px;}",3);
+        }
+    }
+}
+
+function getEventTarget(e) {
+    e = e || window.event;
+    return e.target || e.srcElement;
+}
+
+
+var MoreElementsPopup = {
+    init: function(moreLink, containerForPopupHtmlId, containingElemId, additionalClassname) {
+        MoreElementsPopup.popupToDisplay = dojo.byId("moreOverlayPopup");
+        if (MoreElementsPopup.popupToDisplay) {
+            //remove previous added class name
+            if (MoreElementsPopup.addedClassname) {
+                dojo.removeClass(MoreElementsPopup.popupToDisplay, MoreElementsPopup.addedClassname);
+            }
+            if (additionalClassname) {
+                dojo.addClass(MoreElementsPopup.popupToDisplay, additionalClassname);
+                MoreElementsPopup.addedClassname = additionalClassname;
+            }
+        }
+        else
+        //create popup if not found
+        {
+            if (!MoreElementsPopup.popupToDisplay) {
+                dojo.place('<div id="moreOverlayPopup" class="popup-menu js-popup-menu moreElementsOverlay"></div>', dojo.body());
+                MoreElementsPopup.popupToDisplay = dojo.byId("moreOverlayPopup");
+                dojo.style(MoreElementsPopup.popupToDisplay, 'display', 'none');
+                if (additionalClassname) {
+                    dojo.addClass(MoreElementsPopup.popupToDisplay, additionalClassname);
+                    MoreElementsPopup.addedClassname = additionalClassname;
+                }
+            }
+        }
+        dojo.require('dijit._base.place');
+        //right to left language
+        if (IIIGLOBALS.isRTL) {
+            MoreElementsPopup.rtl = true;
+        } else {
+            MoreElementsPopup.rtl = false;
+        }
+        MoreElementsPopup.IEVersion = dojo.isIE;
+        MoreElementsPopup.containingElemId = containingElemId;
+        MoreElementsPopup.moreLink = moreLink;
+        MoreElementsPopup.overlayHtmlElem = dojo.byId(containerForPopupHtmlId);
+        MoreElementsPopup.moreLinkCoords = dojo.coords(MoreElementsPopup.moreLink, true);
+
+        if(dojo.style(MoreElementsPopup.popupToDisplay, 'display') == 'none') {
+
+            MoreElementsPopup.show();
+
+        }
+        else if(dojo.hasAttr(MoreElementsPopup.popupToDisplay, "reference") && (dojo.attr(MoreElementsPopup.popupToDisplay, "reference") != MoreElementsPopup.overlayHtmlElem.id) )
+        {
+            //new overlay, hide the displayed popup and show the new one on hide end
+            MoreElementsPopup.hideThenShow();
+
+        }
+        else
+        {
+            //toggling same popup with the more link
+            MoreElementsPopup.hide();
+        }
+
+    },
+
+    show: function() {
+        if (!MoreElementsPopup.overlayHtmlElem) {return;}
+
+        //insert html into popup
+        MoreElementsPopup.popupToDisplay.innerHTML = MoreElementsPopup.overlayHtmlElem.innerHTML;
+
+        var overlayArrow = dojo.query(".dropShadowArrow", MoreElementsPopup.popupToDisplay)[0];
+        var closeLink = dojo.query(".closeLink", MoreElementsPopup.popupToDisplay)[0];
+
+        if (closeLink) {
+            dojo.connect(closeLink, "onclick", MoreElementsPopup.hide);
+        }
+
+        // MoreElementsPopup.hideOtherPopups();
+
+
+        //Position popup and arrow
+        dojo.style(MoreElementsPopup.popupToDisplay, {
+            "position": "absolute",
+            "top":  (MoreElementsPopup.moreLinkCoords.y - 60) + "px",
+            "left": (MoreElementsPopup.rtl) ? ((MoreElementsPopup.moreLinkCoords.x + MoreElementsPopup.moreLinkCoords.w + 5 - 400) + "px"): ((MoreElementsPopup.moreLinkCoords.x + MoreElementsPopup.moreLinkCoords.w + 5) + "px")
+        })
+
+        dojo.style(overlayArrow, {
+            "position": "absolute",
+            "top":  "53px",
+            "left": (MoreElementsPopup.rtl) ? "-30px" : "1px"
+        })
+
+        //add a reference attribute so we know which overlay this came from
+        dojo.attr(MoreElementsPopup.popupToDisplay, "reference", MoreElementsPopup.overlayHtmlElem.id )
+        //display popup
+        dojo.style(MoreElementsPopup.popupToDisplay, 'display', 'block');
+
+        //get viewport dimensions and move popup into viewport if need be
+        var vp = dijit.getViewport();
+        var vpDiffBottom = (dojo.style(MoreElementsPopup.popupToDisplay, "top") + (MoreElementsPopup.popupToDisplay.offsetHeight + 20)) - (vp.t + vp.h)
+        //align with bottom
+        if (vpDiffBottom > 0) {
+            dojo.style(MoreElementsPopup.popupToDisplay, "top", (dojo.style(MoreElementsPopup.popupToDisplay,"top") - vpDiffBottom) + "px");
+            dojo.style(overlayArrow, "top", (dojo.style(overlayArrow,"top") + vpDiffBottom) + "px" );
+            //if it gets pushed over the top of the page we need to readjust
+            var vpDiffTop = (vp.t - (dojo.style(MoreElementsPopup.popupToDisplay, "top") + 10));
+            if (vpDiffTop > 0 ) {
+                dojo.style(MoreElementsPopup.popupToDisplay, "top", (dojo.style(MoreElementsPopup.popupToDisplay,"top") + vpDiffTop + 20) + "px");
+                dojo.style(overlayArrow, "top", (dojo.style(overlayArrow,"top") -  vpDiffTop -20) + "px" );
+            }
+        }
+
+        //make sure the scroll bar is reset to the top
+        dojo.query(".overlayElements", MoreElementsPopup.popupToDisplay)
+            .forEach(function(node, index, arr){
+                node.scrollTop = 0;
+            });
+
+        var fadeArgs = null;
+        //IE can't handle the fading in of the transparent png without flashing
+        if (MoreElementsPopup.IEVersion > 0) {
+            dojo.addClass(MoreElementsPopup.popupToDisplay,'popupDisplayed');
+            closeLink.focus();
+        } else {
+            fadeArgs = {
+                node: MoreElementsPopup.popupToDisplay,
+                duration: 200,
+                onEnd: function() {
+                    dojo.addClass(MoreElementsPopup.popupToDisplay,'popupDisplayed');
+                    closeLink.focus();
+                }
+            };
+            dojo.fadeIn(fadeArgs).play();
+        }
+
+    },
+
+    hide: function() {
+        var fadeArgs = null;
+        if (MoreElementsPopup.IEVersion > 0) {
+            dojo.style(MoreElementsPopup.popupToDisplay, 'display','none');
+            dojo.removeClass(MoreElementsPopup.popupToDisplay,'popupDisplayed');
+        } else {
+            fadeArgs = {
+                node: MoreElementsPopup.popupToDisplay,
+                duration: 200,
+                onEnd: function() {
+                    dojo.style(MoreElementsPopup.popupToDisplay, 'display', 'none');
+                    dojo.removeClass(MoreElementsPopup.popupToDisplay,'popupDisplayed');
+                }
+            }
+            dojo.fadeOut(fadeArgs).play();
+        }
+    },
+
+    hideThenShow: function() {
+        var fadeArgs = null;
+        if (MoreElementsPopup.IEVersion > 0) {
+            dojo.style(MoreElementsPopup.popupToDisplay, 'display','none');
+            dojo.removeClass(MoreElementsPopup.popupToDisplay,'popupDisplayed');
+            MoreElementsPopup.show();
+        } else {
+            fadeArgs = {
+                node: MoreElementsPopup.popupToDisplay,
+                duration: 20,
+                onEnd: function() {
+                    dojo.style(MoreElementsPopup.popupToDisplay, 'display', 'none');
+                    dojo.removeClass(MoreElementsPopup.popupToDisplay,'popupDisplayed');
+                    MoreElementsPopup.show();
+                }
+            }
+            dojo.fadeOut(fadeArgs).play();
+        }
+    },
+
+    hideOnFacetClick: function(e) {
+        var target = getEventTarget(e);
+        if (dojo.hasClass(target, 'facetLink')) {
+            MoreElementsPopup.hide();
+        }
+    }
+}
+
+function truncateBatchDialogList(queryString, displayLimit, moreMessage) {
+    var itemList = dojo.query(queryString);
+    var displayCount = 0;
+    var moreCount = 0;
+    var lastElem = null;
+    var inputElemsRequired = false;
+
+    if (itemList) {
+        for (var i=0; i < itemList.length; i++) {
+            //if there is any volume or item requesting (i.e inputs) in this list we do not truncate it
+            if (dojo.query('input', itemList[i]).length > 0) {
+                inputElemsRequired  = true;
+                break;
+            }
+        }
+        if (!inputElemsRequired) {
+            for (var i=0; i < itemList.length; i++) {
+                if (dojo.style(itemList[i], 'display') != 'none') {
+                    displayCount++
+                }
+                if (displayCount ==  displayLimit) {
+                    lastElem = itemList[i];
+                }
+                if (displayCount >  displayLimit) {
+                    itemList[i].style.display = "none";
+                }
+            }
+            moreCount = displayCount -  displayLimit;
+            if (lastElem &&  moreCount > 0 ) {
+                dojo.place("<li class=\"moreCount\">(" + moreCount + " " + moreMessage + ")</li>", lastElem, "after")
+            }
+        }
+    }
+}
+
+function hideListItems(queryString) {
+    var elems = dojo.query(queryString);
+    if (elems) {
+        for (var i=0; i < elems.length; i++){
+            elems[i].parentNode.style.display = 'none';
+        }
+    }
+}
+
+
+//used in sky suite
+function toggleSearchOptions(){
+    if(dojo.byId("searchOptionsLinkComponent").className == "active"){
+        hideSearchOptions();
+    }
+    else{
+        var searchShade = document.createElement("div");
+        searchShade.id = "searchShade"
+        searchShade.style.position = "absolute";
+        searchShade.style.top = "0px";
+        searchShade.style.left = "0px";
+        searchShade.style.height = document.body.clientHeight +"px";
+        searchShade.style.width = "100%";
+        searchShade.style.zIndex = "997";
+        searchShade.onclick = hideSearchOptions;
+        dojo.byId("bodyComponent").appendChild(searchShade);
+
+        //funky method to measure a hidden element
+        dojo.style("skySearchTypeRadioGroupComponent","visibility","hidden");
+        dojo.style("skySearchTypeRadioGroupComponent","display","block");
+        //x = dojo.style("skySearchTypeRadioGroupComponent", "height");
+        x = dojo.byId("skySearchTypeRadioGroupComponent").offsetHeight-25;
+        dojo.style("skySearchTypeRadioGroupComponent","display","none");
+        dojo.style("skySearchTypeRadioGroupComponent","visibility","visible");
+        dojo.style("skySearchTypeRadioGroupComponent","left","auto");
+        dojo.style("skySearchTypeRadioGroupComponent","right","0px");
+        dojox.fx.wipeTo({
+            node: "skySearchTypeRadioGroupComponent",
+            duration: 300,
+            height: x
+        }).play();
+        e = dojo.byId("searchOptionsLinkComponent");
+        e.className = "active";
+        oldTitle = e.innerHTML;
+        e.innerHTML = e.title;
+    }
+}
+
+function pickSearchOption(el){
+    l = dojo.byId("searchOptionsLinkComponent")
+    l.innerHTML = el.title;
+    hideSearchOptions();
+}
+
+var oldTitle = "";
+
+function hideSearchOptions(){
+    l = dojo.byId("searchOptionsLinkComponent")
+    if(l.innerHTML == l.title)
+        l.innerHTML = oldTitle;
+    dojox.fx.wipeOut({
+        node: "skySearchTypeRadioGroupComponent",
+        duration: 300
+    }).play();
+    dojo.byId("searchOptionsLinkComponent").className = "inactive";
+    var node = dojo.byId("searchShade");
+    node.parentNode.removeChild(node);
+    dojo.byId("searchString").focus();
+}
+
+//finds next sibling element
+function nextElem(elem) {
+    do {
+        elem = elem.nextSibling;
+    } while (elem && elem.nodeType != 1);
+    return elem;
+}
+
+//finds prev sibling element
+function prevElem(elem) {
+    do {
+        elem = elem.previousSibling;
+    } while (elem && elem.nodeType != 1);
+    return elem;
+}
+
+//used in cobalt
+function showHideItemsToggle(clickedElem){
+
+    var showElement1, showElement2, hideElement1, hideElement2;
+    var limitElem;
+
+    var currentNode = clickedElem;
+    //get Container
+    while(!dojo.hasClass(currentNode, "ItemsContainer"))  {
+        currentNode =  currentNode.parentNode;
+    }
+
+    if (dojo.hasClass(currentNode,"ItemsContainer"))   {
+        limitElem = currentNode;
+    } else {
+        return false;
+    }
+
+    if (dojo.hasClass(clickedElem, "showAllToggleLink"))  {
+        showElement1 = dojo.query(".allItemsSection", limitElem)[0];
+        showElement2 = dojo.query(".showAvailableToggleLink", limitElem)[0];
+        hideElement1 =  dojo.query(".availableItemsSection", limitElem)[0];
+        hideElement2 = clickedElem
+
+    } else if (dojo.hasClass(clickedElem, "showAvailableToggleLink")){
+        showElement1 = dojo.query(".availableItemsSection", limitElem)[0];
+        showElement2 = dojo.query(".showAllToggleLink", limitElem)[0];
+        hideElement1 =  dojo.query(".allItemsSection", limitElem)[0];
+        hideElement2 = clickedElem
+
+    } else if (dojo.hasClass(clickedElem, "showAllMaxToggleLink")){
+        showElement1 = dojo.query(".allMaxItemsSection", limitElem)[0];
+        showElement2 = dojo.query(".showAvailableMaxToggleLink", limitElem)[0];
+        hideElement1 =  dojo.query(".availableMaxItemsSection", limitElem)[0];
+        hideElement2 = clickedElem
+
+    } else if (dojo.hasClass(clickedElem, "showAvailableMaxToggleLink")) {
+        showElement1 = dojo.query(".availableMaxItemsSection", limitElem)[0];
+        showElement2 = dojo.query(".showAllMaxToggleLink", limitElem)[0];
+        hideElement1 =  dojo.query(".allMaxItemsSection", limitElem)[0];
+        hideElement2 = clickedElem
+    }   else {
+
+        return false;
+    }
+
+    if (dojo.hasClass(showElement1, "availCheckboxLink")){
+        dojo.style(showElement1, "display", "inline-block");
+    } else {
+        dojo.style(showElement1, "display", "block");
+    }
+
+    if (dojo.hasClass(showElement2, "availCheckboxLink")){
+        dojo.style(showElement2, "display", "inline-block");
+    } else {
+        dojo.style(showElement2, "display", "block");
+    }
+
+    dojo.style(hideElement1, "display", "none");
+    dojo.style(hideElement2, "display", "none")
+}
+
+//used in cobalt and gold
+function initBibHoldingsToggle(itemsContainerId,defaultToAllItems) {
+
+    //if defaultToAllItems true, then the items display should have the 'only show available' toggle unchecked, displaying all items
+
+    var sectionQueryAll = null;
+    var sectionQueryAvail = null;
+    var showAllLink = null;
+    var showAvailLink = null;
+    var availSection = null;
+    var allSection = null;
+    var hideSection1 = null;
+    var hideSection2 = null;
+    var itemsContainer = document.getElementById(itemsContainerId);
+
+    if (itemsContainer) {
+        //initially hide available section if there is an allItemsSection
+        if (dojo.query(".allMaxItemsSection", itemsContainer).length > 0) {
+            dojo.query(".availableItemsSection", itemsContainer).style("display", "none");
+            dojo.query(".allItemsSection", itemsContainer).style("display", "none");
+            showAllLink = dojo.query(".showAllMaxToggleLink",itemsContainer)[0];
+            showAvailLink = dojo.query(".showAvailableMaxToggleLink",itemsContainer)[0];
+            availSection = dojo.query(".availableMaxItemsSection",itemsContainer)[0];
+            allSection = dojo.query(".allMaxItemsSection",itemsContainer)[0];
+
+            //click on the max items links so they will load - using jquery so event listeners will be
+            //moved along with the link  - only fire once
+            if (IIIGLOBALS.isGoldSkin && showAllLink) {
+                var $itemsHeader = $j(".itemsSectionHeader a", itemsContainer);
+                if ($itemsHeader.length > 0) {
+                    $j($itemsHeader[0]).one("click",
+                        function() {clickMaxItemsLinks(this)}
+                    )
+                }
+            }
+
+
+        }  else {
+
+            showAllLink = dojo.query(".showAllToggleLink",itemsContainer)[0];
+            showAvailLink = dojo.query(".showAvailableToggleLink",itemsContainer)[0];
+            availSection = dojo.query(".availableItemsSection",itemsContainer)[0];
+            allSection = dojo.query(".allItemsSection",itemsContainer)[0];
+
+        }
+
+
+        if (dojo.hasClass(dojo.body(), "recordDetailPage") && (!showAllLink || !availSection || !allSection || !showAvailLink)) {
+            return;
+        }
+
+        var allHeaders = null;
+        var availHeaders =null;
+
+        if (defaultToAllItems) {
+            if (allSection && availSection) {
+                dojo.style(allSection, "display", "block");
+                dojo.style(availSection, "display", "none");
+            }
+        } else {
+            if (allSection && availSection) {
+                dojo.style(allSection, "display", "none");
+                dojo.style(availSection, "display", "block");
+            }
+        }
+        if (allSection) {
+            allHeaders = dojo.query('.itemsHeader',allSection )[0];
+        }
+        if (availSection) {
+            availHeaders = dojo.query('.itemsHeader',availSection)[0];
+        }
+        if (availHeaders && showAllLink){
+            dojo.place(showAllLink,availHeaders);
+        }
+        if (showAvailLink && allHeaders) {
+            dojo.place(showAvailLink,allHeaders);
+        }
+        if (showAllLink && availSection) {
+            dojo.style(showAllLink, "display", "inline-block");
+        }
+
+        if (showAvailLink && availSection) {
+            dojo.style(showAvailLink, "display", "inline-block");
+        }
+
+        if (IIIGLOBALS.isGoldSkin) {
+            if (!dojo.hasClass(dojo.body(), "recordDetailPage")) {
+                dojo.query(".itemsContainerPopUpTrigger", itemsContainer).forEach(function(node, index, array) {
+                    if (index == array.length - 1) {
+                        //if more than one place it in the last one and empty the others.
+                        //Using jQuery here to replace because we need to move event listeners along
+                        //with element
+                        var availMess = dojo.query(".itemsSectionHeader", itemsContainer)[0];
+                        if (availMess) {
+                            //using Jquery replace because we need to move event listeners along
+                            //with element
+                            $j(node).empty().append($j(availMess).contents());
+                        }
+                    }  else {
+                        $j(node).empty();
+                    }
+                })
+            }
+        } else {
+            if (!dojo.hasClass(dojo.body(), "recordDetailPage")) {
+                var labelElem =  (dojo.query(".itemsContainerHeader", itemsContainer))[0];
+                if (labelElem) {
+                    var toggleMessElem = dojo.place("<span class=\"itemsToggleAvailMessage\"></span>", labelElem);
+                    var availMess = dojo.query(".itemsAvailHeader", itemsContainer)[0];
+                    if (availMess) {
+                        toggleMessElem.innerHTML = "(" + availMess.innerHTML + ")";
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+//used in cobalt/gold for al items on the browse display
+function clickMaxItemsLinks(clickedElem) {
+    var currentNode = clickedElem;
+    var limitElem;
+    while(!dojo.hasClass(currentNode, "ItemsContainer"))  {
+        currentNode =  currentNode.parentNode;
+    }
+
+    limitElem = currentNode;
+
+    dojo.query(".maxItemsLink", limitElem).forEach(function(node) {
+        //prevents unecessary ajax requests when toggling the items header
+        if (!dojo.hasClass(node, "clicked")) {
+            clickLink(node.id);
+            dojo.addClass(node, "clicked")
+        }
+    })
+}
+
+//used in articles page - IIIMoreLessFacetsTrackingObject is global
+function resetArticlesMoreLesstTrackingObject(e) {
+    var target = getEventTarget(e);
+    if (dojo.hasClass(target, 'facetLink')) {
+        if (typeof IIIMoreLessFacetsTrackingObject != "undefined") {
+            IIIMoreLessFacetsTrackingObject = [];
+        }
+    }
+}
+
+//Do Not Remove -  Empty function to prevent js error for some enriched content - C1287737
+function elContentToggleInit() {}
+
+function submitFormById(formId) {
+    var formToSubmit = dojo.byId(formId);
+    if (formToSubmit && formToSubmit.tagName.toUpperCase() == "FORM") {
+        formToSubmit.submit();
+    }
+}
+
+//Used in sky template
+function setFocusOnSearchInput() {
+    var si = document.getElementById("searchString");
+    if (si) {
+        si.focus();
+    }
+}
+
+function scrollToRating() {
+    var $resultClicked = null,
+        qs = getQueryString();
+
+    //Checks to see if the actionRecordId is a parameter in the url. If so it assigns the id
+    //to the resultClicked variable.
+    if (qs["actionRecordId"]) {
+        $resultClicked = $j("#resultRecord-" + qs["actionRecordId"]);
+    }
+    //If the resultClicked variable is assigned, scrolls the page to the top of the record ID's position.
+    if ($resultClicked.length) {
+        docPos = $resultClicked.offset().top;
+        scrollToPosition(docPos - 15);
+        $resultClicked.find(".communityRating").css("display","block");
+        setTimeout(function() {
+            $resultClicked.find(".communityRating").css("display","none");
+        }, 5000)
+    }
+
+}
+
+function showPopInDialog(elem,options) {
+    var $topViewableElem  = null,
+        topPos = null,
+        docPos = null,
+        bottomOverflow = null,
+        popinOverflowTop = null,
+        popInSpace = null,
+        docHeight = null,
+        wrapperPushOrigHeight = null,
+        wrapperPushNewHeight = null,
+        clickedElem = elem,
+        $resultClicked = null,
+        percentageViewable,
+        cssHeight = "",
+        $popIn = $j("#popInDialogUpdateAnyComponent"),
+        qs = null,
+        isBatchPopIn = (options && options.batchPopIn) ? true : false,
+        contentWrapper = (options && options.contentWrapperSelector) ? $j(options.contentWrapperSelector)[0] : $j("#mainContentArea")[0],
+        // we are toggling the pop in parent css on the record page - the popin slides in from the mainContentArea
+        // not off the the contentWrapper as it is on the browse page
+        isAutoChangeOverflow = ($j("body").hasClass("recordDetailPage") || $j("body").hasClass("reviewsPage")  ) ? true : false;
+    //we need to check the globals isBatchPopIn after an ajax update
+
+    //Batch action popIns have special look and behavior
+    if (isBatchPopIn) {
+        $popIn.addClass("batchPopIn");
+    } else {
+        $popIn.removeClass("batchPopIn");
+    }
+
+    if (contentWrapper) {
+        $j(contentWrapper).css("position", "relative");
+        $popIn.appendTo(contentWrapper);
+    }
+
+    if (options && options.resultElemSelector) {
+
+        if (clickedElem)  {
+            $resultClicked = $j(clickedElem).closest(options.resultElemSelector);
+        } else {
+            //if we are returing from a login redirect we need to get the clicked record ID from the url
+            qs = getQueryString();
+            if (qs["actionRecordId"]) {
+                if (qs["actionRecordId"] == "batchAction") {
+                    //batch action
+                    $popIn.addClass("batchPopIn");
+                    //no masking of results
+                    options.maskOtherResults = false;
+                    $resultClicked = $j("#actionToolbar");
+                } else {
+                    //individual record action
+                    $resultClicked = $j("#resultRecord-" + qs["actionRecordId"]);
+                }
+            } else if(qs["sp"]) {
+
+                $resultClicked = $j("#resultRecord-" + (qs["sp"]).substring(1));
+            } else {
+                //open a normal popin near the top of the page
+                $resultClicked = $j("#contentColumn");
+            }
+
+        }
+
+        //fallback to body if there is no resultClicked
+        if (!$resultClicked.length) {
+            $resultClicked = $j("body");
+        }
+        //reset resultClicked global - used for readjusting mask and popIn position as search results page updates. e.g. Articles Preview
+        IIIGLOBALS.resultClickedId =  $resultClicked.attr("id");
+
+        if ($resultClicked.length) {
+            //scroll to reveal all of the result
+            docPos = $resultClicked.offset().top;
+            topPos = $resultClicked.position().top;
+
+            // if the top of the clicked record is above the top of the viewport then scroll into view
+            if (docPos < $j(window).scrollTop()) {
+                scrollToPosition(docPos - 15)
+            } else {
+                bottomOverflow = getPopInBottomOverflow();
+                if (bottomOverflow >= 0) {
+                    scrollToPosition($j(window).scrollTop() + bottomOverflow  + 15);
+                }
+            }
+
+            // Calculates the space needed to display the popin. If the space is more than the document height,
+            // the following adds the difference plus 10 pixels to the height of the page wrapper push element.
+            popInSpace = (docPos + $j("#popInDialogUpdateAnyComponent").outerHeight());
+            docHeight = $j(document).height();
+            if (popInSpace > docHeight) {
+                wrapperPushOrigHeight = $j(".pageWrapperPush").height();
+                wrapperPushNewHeight = (popInSpace - docHeight) + wrapperPushOrigHeight + 10;
+                $j(".pageWrapperPush").css("height", wrapperPushNewHeight + "px");
+            }
+        }
+
+        if (options.maskOtherResults) {
+            //Check if mask element exist - if not, add it to searchResults
+            if (!$j("#mask_top").length) {
+                $j("<div id=\"mask_top\"></div>").css("opacity", 0.8).appendTo(contentWrapper);
+            }
+
+            //Check if mask element exist - if not, add it to searchResults
+            if (!$j("#mask_bottom").length) {
+                $j("<div id=\"mask_bottom\"></div>").css("opacity", 0.8).appendTo(contentWrapper);
+            }
+        }
+    }
+
+    topPos = (topPos) ? topPos : 0;
+
+    $popIn.hide().css("top", topPos + "px").show();
+    var $popInParent = $popIn.parent();
+
+    if ($popIn.css("visibility") == "visible") {
+        //close then open/slide visible
+        if (isAutoChangeOverflow) {
+            $popInParent.css("overflow", "hidden");
+            $j("#mainContentArea").css("overflow", "hidden");
+        }
+        $popIn.contents().not("#dialogLoadSpinner").not("#closeXButton").remove();
+        $popIn.find("#dialogLoadSpinner").show();
+
+        if (IIIGLOBALS.isRTL) {
+            $popIn.animate({
+                    left: 0 - ($popIn.outerWidth() + 20),
+                    top: topPos
+                }, function() {
+                    $popIn.animate({
+                        left: 0,
+                        top:topPos
+                    });
+                    //set container to overflow:visible so close button appears
+                    $popIn.addClass("open").removeClass("canceled");
+                    if (isAutoChangeOverflow) {
+                        $popInParent.css("overflow", "visible");
+                        $j("#mainContentArea").css("overflow", "visible");
+                    }
+                    if (typeof options === "object" && options.maskOtherResults && $resultClicked.length) {
+                        $j("#mask_top").css("position", "absolute").css("top", "0").css("height",$resultClicked.position().top + "px").css("width","100%");
+                        $j("#mask_bottom").css("position", "absolute").css("top", $resultClicked.position().top + $resultClicked.height() + "px").css("height",($j(contentWrapper).height() - ($resultClicked.position().top + $resultClicked.height())) + "px").css("width","100%");
+                    }
+
+                    bottomOverflow = getPopInBottomOverflow();
+                    if (bottomOverflow >= 0) {
+                        scrollToPosition($j(window).scrollTop() + bottomOverflow  + 15)
+                    }
+                }
+            )
+        } else {
+            $popIn.animate({
+                right: 0 - ($popIn.outerWidth() + 20),
+                top: topPos
+            }, function() {
+                $popIn.animate({
+                    right: 0,
+                    top:topPos
+                });
+                //set container to overflow:visible so close button appears
+                $popIn.addClass("open").removeClass("canceled");
+                if (isAutoChangeOverflow) {
+                    $popInParent.css("overflow", "visible");
+                    $j("#mainContentArea").css("overflow", "visible");
+                }
+                if (typeof options === "object" && options.maskOtherResults && $resultClicked.length) {
+                    $j("#mask_top").css("position", "absolute").css("top", "0").css("height",$resultClicked.position().top + "px").css("width","100%");
+                    $j("#mask_bottom").css("position", "absolute").css("top", $resultClicked.position().top + $resultClicked.height() + "px").css("height",($j(contentWrapper).height() - ($resultClicked.position().top + $resultClicked.height())) + "px").css("width","100%");
+                }
+
+                bottomOverflow = getPopInBottomOverflow();
+                if (bottomOverflow >= 0) {
+                    scrollToPosition($j(window).scrollTop() + bottomOverflow  + 15);
+                }
+
+            })
+        }
+    } else {
+        //just slide open/visible
+        $popIn.css("visibility", "visible");
+        $popIn.addClass("open").removeClass("canceled");
+        $popIn.find("#dialogLoadSpinner").show();
+        if (typeof options === "object" && options.maskOtherResults && $resultClicked.length) {
+            cssHeight = ($resultClicked.position().top > 0) ? ($resultClicked.position().top - 1) + "px" : $resultClicked.position().top + "px";
+            $j("#mask_top").css("position", "absolute").css("top", "0").css("height",cssHeight).css("width","100%").fadeIn("400");
+            $j("#mask_bottom").css("position", "absolute").css("top", $resultClicked.position().top + $resultClicked.outerHeight() + "px").css("height",($j(contentWrapper).height() - ($resultClicked.position().top + $resultClicked.height())) + "px").css("width","100%").fadeIn("400");
+        }
+        if (IIIGLOBALS.isRTL) {
+            $popIn.animate({
+                left: 0,
+                topPos:topPos
+            }, function() {
+                $popIn.addClass("open").removeClass("canceled");
+                if (isAutoChangeOverflow) {
+                    $popInParent.css("overflow", "visible");
+                    $j("#mainContentArea").css("overflow", "visible");
+                }
+
+                bottomOverflow = getPopInBottomOverflow();
+                if (bottomOverflow >= 0) {
+                    scrollToPosition($j(window).scrollTop() + bottomOverflow  + 15);
+                }
+            })
+        } else {
+            $popIn.animate({
+                right: 0,
+                topPos:topPos
+            }, function() {
+                $popIn.addClass("open").removeClass("canceled");
+                if (isAutoChangeOverflow) {
+                    $popInParent.css("overflow", "visible");
+                    $j("#mainContentArea").css("overflow", "visible");
+                }
+                bottomOverflow = getPopInBottomOverflow();
+                if (bottomOverflow >= 0) {
+                    scrollToPosition($j(window).scrollTop() + bottomOverflow  + 15);
+                }
+            })
+        }
+    }
+
+    function getPopInBottomOverflow() {
+        if ($resultClicked) {
+            return  ($resultClicked.offset().top +  $j("#popInDialogUpdateAnyComponent").outerHeight()) - ($j(window).scrollTop() + $j(window).height());
+        } else {
+            return 0;
+        }
+    }
+
+}
+
+
+
+//call this function when the popin dialog position needs adjusting on the search results page
+//used for readjusting mask and popIn position as search results page updates.- called from Articles Preview
+function readjustPopInDialogPosition(contentWrapperId) {
+    var $contentWrapper = (contentWrapperId) ? $j("#" + contentWrapperId) : $j("#mainContentArea");
+    var $popIn = $j("#popInDialogUpdateAnyComponent");
+    var $resultClicked;
+    //global containing id of the search result with popin showing
+    if (IIIGLOBALS.resultClickedId && $popIn.hasClass("open")) {
+        $resultClicked = $j("#" + IIIGLOBALS.resultClickedId);
+        if ($contentWrapper.length && $resultClicked.length) {
+            //adjust popIn position
+            $popIn.css("top",$resultClicked.position().top);
+            //adjust masks
+            cssHeight = ($resultClicked.position().top > 0) ? ($resultClicked.position().top - 1) + "px" : $resultClicked.position().top + "px";
+            $j("#mask_top").css("position", "absolute").css("top", "0").css("height",cssHeight);
+            $j("#mask_bottom").css("position", "absolute").css("top", $resultClicked.position().top + $resultClicked.outerHeight() + "px").css("height",($contentWrapper.height() - ($resultClicked.position().top + $resultClicked.height())) + "px");
+        }
+    }
+
+}
+
+//scroll viewport to maintain focus of current record when elements get loaded async into serach results -
+//called form articlePreview
+function readjustPopInScrollPosition(elemSelectorString){
+    var $elem,currentScrollTop, $popIn;
+    $popIn = $j("#popInDialogUpdateAnyComponent");
+    $elem = $j(elemSelectorString);
+    if ($popIn.hasClass("open") && $elem.length) {
+        currentScrollTop = $j(window).scrollTop();
+        //only want to adjust scroll pos if position is below element that pushes down results - like articlePreview
+        if  (currentScrollTop > $elem.position().top) {
+            $j(window).scrollTop(currentScrollTop + $elem.height())
+        }
+    }
+}
+
+function closePopInDialog(isCanceled, options) {
+    var $popIn = $j("#popInDialogUpdateAnyComponent");
+    var $popInParent = $popIn.parent();
+    // we are toggling the pop in parent css on the record page - the popin slides in from the mainContentArea
+    // not off the the contentWrapper as it is on the browse page
+    var isAutoChangeOverflow = ($j("body").hasClass("recordDetailPage") || $j("body").hasClass("reviewsPage")  ) ? true : false;
+
+    if (isAutoChangeOverflow) {
+        $popInParent.css("overflow", "hidden");
+        $j("#mainContentArea").css("overflow", "hidden");
+    }
+    $j("#mask_top, #mask_bottom").fadeOut("400");
+    //reset resultClicked global - used for readjusting mask and popIn position as search results page updates. e.g. Articles Preview
+    IIIGLOBALS.resultClickedId = null;
+
+    if (IIIGLOBALS.isRTL) {
+        $popIn.animate({
+            left: 0 - ($popIn.outerWidth() + 20)
+        }, function() {
+            $popIn.css("visibility", "hidden");
+            $j("#popInContentWrapper").contents().not("#dialogLoadSpinner").not("#closeXButton").remove();
+            $j("#popInContentWrapper #dialogLoadSpinner").show();
+            $popIn.removeClass("open").hide();
+            //if user closed/canceled popin manually, we want to respect that on content update
+            if (isCanceled) {
+                $popIn.addClass("canceled");
+                //stop current ajax request - the tapestry.popInAjax deferred dojo object is set in tapestry.js
+                if (tapestry && tapestry.popInAjax ) {
+                    tapestry.popInAjax.cancel();
+                }
+            }
+        })
+    } else {
+        $popIn.animate({
+            right: 0 - ($popIn.outerWidth() + 20)
+        }, function() {
+            $popIn.css("visibility", "hidden");
+            $j("#popInContentWrapper").contents().not("#dialogLoadSpinner").not("#closeXButton").remove();
+            $j("#popInContentWrapper #dialogLoadSpinner").show();
+            $popIn.removeClass("open").hide();
+            //if user closed/canceled popin manually, we want to respect that on content update
+            if (isCanceled) {
+                $popIn.addClass("canceled");
+                //stop current ajax request - the tapestry.popInAjax deferred dojo object is set in tapestry.js
+                if (tapestry && tapestry.popInAjax ) {
+                    tapestry.popInAjax.cancel();
+                }
+            }
+        })
+    }
+
+    $j(document).trigger('popup:closed');
+}
+
+function showPopinConfirmation(elem) {
+    var $elem = $j(elem);
+    var $popInContent = $elem.closest("#popInContentWrapper");
+    $popInContent.children().not("form").not(".closeXButton").not(".popInConfirmation").css("opacity",0);
+    $popInContent.children("form").children().not(".popInConfirmation").css("opacity",0);
+    $j(".popInConfirmation", $popInContent).css("position", "absolute").css("top",($popInContent.height()/3) + "px").show();
+
+}
+
+function closePopinConfirmation(elem) {
+    var $elem = $j(elem);
+    var $popInContent = $elem.closest("#popInContentWrapper");
+    $popInContent.children().not("form").not(".closeXButton").not(".popInConfirmation").css("opacity","");
+    $popInContent.children("form").children().not(".popInConfirmation").css("opacity","");
+    $j(".popInConfirmation", $popInContent).css("position", "").css("top","").hide();
+
+}
+
+function displayPopInContent() {
+    var $popInDialog = $j("#popInDialogUpdateAnyComponent");
+    $j("#popInContentWrapper").fadeIn(100);
+    $j("#popInContentWrapper #dialogLoadSpinner").hide();
+    //class canceled indicates the user has closed the popin so
+    //we do not want to open it automatically when content is updated
+    if ($popInDialog.hasClass("canceled")) {
+        //remove content so we have a fresh popin for next time
+        $j("#popInContentWrapper").contents().not("#dialogLoadSpinner").not("#closeXButton").remove();
+        $j("#popInContentWrapper #dialogLoadSpinner").show();
+    } else if (!$popInDialog.hasClass("open")) {
+        //on pages with search results we need to identify the location of the result that is being acted upon
+        if  (!$j("body").hasClass("recordDetailsPage")) {
+            showPopInDialog(null,{resultElemSelector:'.searchResult', maskOtherResults:true});
+        } else {
+            showPopInDialog();
+        }
+        $j("#popInContentWrapper #dialogLoadSpinner").hide();
+    }
+
+    $j($popInDialog.find('input:not(:hidden)')[0]).focus();
+}
+
+function percentageOfElementInVerticalViewport(element) {
+    var viewportHeight = $j(window).height(),
+        documentScrollTop = $j(document).scrollTop(),
+        minTop = documentScrollTop,
+        maxTop = documentScrollTop + viewportHeight,
+        $elem = $j(element),
+        elementOffset = $elem.offset(),
+        elementHeight = $elem.height(),
+        verticalVisible,
+        percentVerticalVisible;
+
+    if (elementHeight > 0) {
+        if (elementOffset.top >= minTop && elementOffset.top + elementHeight <= maxTop) {
+            verticalVisible = elementHeight;
+        } else if (elementOffset.top < minTop) {
+            verticalVisible =elementHeight - (minTop - elementOffset.top);
+        }  else {
+            verticalVisible = maxTop  - elementOffset.top;
+        }
+
+        percentVerticalVisible = (verticalVisible / elementHeight) * 100;
+
+        return percentVerticalVisible;
+    }  else {
+        return  0;
+    }
+
+}
+
+function scrollToPosition(topPos) {
+    $j('html,body').animate({
+        scrollTop:topPos
+    }, 300);
+}
+
+function getQueryString() {
+    var result = {}, queryString = location.search.substring(1),
+        re = /([^&=]+)=([^&]*)/g, m;
+
+    while (m = re.exec(queryString)) {
+        result[decodeURIComponent(m[1])] = decodeURIComponent(m[2]);
+    }
+
+    return result;
+}
+
+function toggleBibHoldingsPopup(elem, forceClose, popupWrapperClassOverride, containerElementClassOverride) {
+    var $elem = $j(elem),
+        containerElemClass = (containerElementClassOverride) ? containerElementClassOverride : "searchResult",
+        $searchContainer = $elem.closest("." + containerElemClass),
+        $bibHoldingsWrapper,
+        popupWrapperClass,
+        elemPositionObj,
+        $dropShadowUpArrow,
+        $offsetParent,
+        //the page container that has overflow:hidden set. Popups will get chopped outside this container
+        $overflowHiddenContainer =  $j("#mainContentArea");
+
+    $contentWrapper = ($j(".bookcartContents").length) ? $j(".bookcartContents"): $j("#mainContentArea");
+
+    popupWrapperClass = (popupWrapperClassOverride) ? popupWrapperClassOverride : "bibHoldingsWrapper";
+
+    if ($searchContainer.length) {
+        $offsetParent = $elem.offsetParent();
+
+        //hide other displayed popups
+        $j(".popUpWrapper.displayed", $contentWrapper).fadeOut(100, function() {
+            $j(this).removeClass("displayed");
+        });
+
+        $bibHoldingsWrapper = $j("." + popupWrapperClass, $searchContainer[0]);
+        //show holdings pop up
+        if ($bibHoldingsWrapper.css("display") == "none" && forceClose !== true) {
+
+            //if the up arrow is present we want to open the popup below the link, otherwise default back to
+            //opening to the right of the link
+            $dropShadowUpArrow = $bibHoldingsWrapper.find(".dropShadowUpArrow");
+            if ($dropShadowUpArrow.length) {
+                //adjust popin position to open up more space for holdings table if
+                //the trigger link is too far to the right.
+                elemPositionObj =  $elem.position();
+
+                if (IIIGLOBALS.isRTL) {
+
+                    //find the closest relatively positioned element. Offset will be calculated against that container
+                    if (elemPositionObj.left < ($offsetParent.outerWidth() - $offsetParent.outerWidth()/4)) {
+
+                        $bibHoldingsWrapper.css("right", ($offsetParent.outerWidth() - elemPositionObj.left - 120) + "px")
+                            .css("top", (elemPositionObj.top + 30) + "px");
+
+                        $dropShadowUpArrow.addClass("positionAdjusted");
+
+                    } else {
+
+                        $bibHoldingsWrapper.css("right", ($offsetParent.outerWidth() - elemPositionObj.left - 70) + "px")
+                            .css("top", (elemPositionObj.top + 30) + "px");
+                    }
+
+                } else {
+
+                    //adjust position of popup to provide more room for popup content
+                    if (elemPositionObj.left > $offsetParent.outerWidth()/4) {
+
+                        $bibHoldingsWrapper.css("left", (elemPositionObj.left - 90) + "px")
+                            .css("top", (elemPositionObj.top + 30) + "px");
+
+                        $dropShadowUpArrow.addClass("positionAdjusted");
+
+                    } else {
+
+                        $bibHoldingsWrapper.css("left", (elemPositionObj.left - 40) + "px")
+                            .css("top", (elemPositionObj.top + 30) + "px");
+
+                    }
+
+                }
+
+            } else {
+                //no up arrow present - open popup to the right of the link
+
+                if (IIIGLOBALS.isRTL) {
+
+                    $bibHoldingsWrapper.css("right", ($offsetParent.outerWidth() - $elem.position().left + 17) + "px")
+                        .css("top", ($elem.position().top -25) + "px");
+
+                } else {
+
+                    $bibHoldingsWrapper.css("left", ($elem.position().left + $elem.width() + 25) + "px")
+                        .css("top", ($elem.position().top -25) + "px");
+
+                }
+
+            }
+
+            //adjust sizing if popup is getting chopped over edge of the overflow:hidden container
+            if ($overflowHiddenContainer.length) {
+                var pixelsOverEdge = 0;
+                var allowedPixelsOver = (IIIGLOBALS.isRecordPage) ? 0 : 15;
+
+                if (IIIGLOBALS.isRTL) {
+
+                    pixelsOverEdge =  (
+                        parseInt($bibHoldingsWrapper.css("right"), 10) + $bibHoldingsWrapper.outerWidth()
+                    ) - ($overflowHiddenContainer.outerWidth() + allowedPixelsOver);
+
+                } else {
+
+                    pixelsOverEdge =  (
+                        parseInt($bibHoldingsWrapper.css("left"), 10) + $bibHoldingsWrapper.outerWidth()
+                    ) - ($overflowHiddenContainer.outerWidth() + allowedPixelsOver);
+
+                }
+
+                if (pixelsOverEdge > 0) {
+
+                    $bibHoldingsWrapper.css("width", $bibHoldingsWrapper.width() - (pixelsOverEdge + 2))
+                        .css("min-width", "0");
+
+                }
+            }
+
+            $bibHoldingsWrapper.stop().fadeIn(100, function() {
+                $j(this).addClass("displayed");
+            });
+
+        } else {
+
+            //hide holdings pop up
+            $bibHoldingsWrapper.stop().fadeOut(100, function() {
+                $j(this).removeClass("displayed");
+            });
+
+        }
+
+    }
+}
+
+//ratings for the review form or review ratings display
+//disableUserSelect is used when you only want ratings display, not ratings selection
+var ReviewRatings = function(userRating, myRating, recordID, containerID, isDisableUserSelect, isReviewForm) {
+    this.userRating  = (userRating > -1) ? userRating : null;
+    this.myRating = (myRating > -1) ? myRating : null;
+    this.recordID = recordID;
+    //tapestry sometimes repeats a container id that already exists on the page
+    //when rendering a review form, so we will assume that an rating input that is not disabled is in
+    //a review form
+    this.isDisableUserSelect = isDisableUserSelect;
+    this.container = (isDisableUserSelect === false) ? $j("form.reviewForm #" + containerID)[0] : $j("#" + containerID)[0] ;
+    this.formContainer = null;
+    this.starContainer = null;
+    this.communityContainer = null;
+    this.inputField = null;
+
+    /*get elements - communityContainer, starContainer, formContainer and inputField*/
+    if (this.container) {
+        this.starContainer = $j(".starArea", this.container)[0];
+        if (this.isDisableUserSelect === false) {
+            this.formContainer = $j(this.container).closest("form.reviewForm")[0];
+            if (this.formContainer){
+                this.inputField =  $j(".ratingsInput", this.formContainer)[0];
+            }
+        }
+        this.setInitialStars();
+        this.initEvents();
+    }
+};
+
+ReviewRatings.prototype.initEvents = function(){
+    var aElems = this.container.getElementsByTagName("a");
+    for(var i=0; i<aElems.length; i++){
+        aElems[i].copy = this;
+        aElems[i].index = i+1;
+        aElems[i].onclick = this.clickEvent;
+    }
+};
+
+ReviewRatings.prototype.hasMyRating = function() {
+    if(this.myRating != null) {
+        return true;
+    }
+    return false;
+};
+
+ReviewRatings.prototype.hasUserRating = function() {
+    if(this.userRating != null) {
+        return true;
+    }
+    return false;
+};
+
+ReviewRatings.prototype.setInitialStars = function() {
+    var myIntRating = parseInt(this.myRating, 10);
+    var actualRating = this.userRating;
+    // Determines the decimal value of the rating
+    var decimal = actualRating - parseInt(actualRating, 10);
+    var roundedRating;
+    if ((decimal < .3) || (decimal > .7)) {
+        //If the decimal value is less than .3 the rating is rounded down to the nearest whole number.
+        //If the decimal value is greater than .7 the rating is rounded up to the nearest whole number.
+        roundedRating = Math.round(actualRating);
+    } else {
+        //If the decimal value is between .3 and .7 it is rounded to the nearest .5.
+        roundedRating = parseInt(actualRating, 10) + "-half";
+    }
+
+    if (this.hasMyRating()) {
+        if (this.isDisableUserSelect) {
+            this.starContainer.className = "starArea reviewDisplayStars mystar mystar" + myIntRating;
+        } else {
+            this.starContainer.className = "starArea mystar mystar" + myIntRating;
+        }
+    } else if (this.hasUserRating){
+        if (this.isDisableUserSelect) {
+            this.starContainer.className = "starArea reviewDisplayStars reviewstar reviewstar" + roundedRating;
+        } else {
+            this.starContainer.className = "starArea reviewstar reviewstar" + roundedRating;
+        }
+    }
+    return;
+};
+
+ReviewRatings.prototype.clickEvent = function() {
+    if (!this.copy.isDisableUserSelect && (this.index != this.copy.myRating)){
+        this.copy.myRating = this.index;
+        this.copy.inputField.value = this.index;
+        this.copy.setInitialStars();
+    }
+    return false;
+};
+
+//Ratings for the browse and record page: the one click ajax submission ratings
+var Ratings = function(communityRating, myRating, recordID, isDisableUserSelect, isShowMyRating, isDisableOnClick) {
+    this.isShowMyRating = isShowMyRating;
+    this.isDisableUserSelect = isDisableUserSelect;
+    this.isDisableOnClick = (isDisableOnClick == null) ? false : isDisableOnClick;
+    this.communityRating = (communityRating) ? communityRating : 0;
+    this.myRating = (myRating!=0) ? myRating : null;
+    this.recordID = recordID;
+    this.container = document.getElementById("starForm_" + this.recordID);
+    this.formContainer = null;
+    this.starContainer = null;
+    this.communityContainer = null;
+    this.inputField = null;
+
+    /*get elements - communityContainer, starContainer, formContainer and inputField*/
+    var children = this.container.getElementsByTagName("*");
+    for (var i=0; i<children.length; i++){
+        if(children[i].nodeType == 1) {
+            if (children[i].className == "communityRating"){
+                this.communityContainer = children[i];
+            } else if (children[i].className == "ratingForm"){
+                this.formContainer = children[i].parentNode;
+            } else if (children[i].className == "ratingsInput"){
+                this.inputField = children[i];
+            } else if (children[i].className == "starArea"){
+                this.starContainer = children[i];
+            }
+        }
+    }
+    this.setInitialStars();
+    this.initEvents();
+    //setup a variable that can be accessed from inside the timeout
+    var self = this;
+    //If we are updating then hide the rating
+    if ($j("#resultRecord-"+recordID).hasClass("updatingUserRating")) {
+        this.showAverage(); //Show the average
+        //Remove the updating class now
+        $j("#resultRecord-"+recordID).removeClass("updatingUserRating");
+
+        //Timeout the window if it has not been activated
+        setTimeout(function() {
+            if (self.communityContainer.style.display == "block") {
+                self.hideAverage();    //Hide the acerage
+            }
+        }, 5000)
+
+    }
+
+};
+
+Ratings.prototype.initEvents = function() {
+    this.starContainer.communityContainer = this.communityContainer;
+
+    this.starContainer.onmouseover = this.showAverage;
+    this.starContainer.onmouseout = this.hideAverage;
+
+    $j(this.starContainer).on('focus', 'a', this.showAverage.bind(this));
+    $j(this.starContainer).on('blur', 'a', this.hideAverage.bind(this));
+
+    var aElems = this.container.getElementsByTagName("a");
+    for(var i=0; i<aElems.length; i++){
+        aElems[i].copy = this;
+        aElems[i].index = i+1;
+
+        if (!this.isDisableOnClick) {
+            aElems[i].onclick = this.clickEvent;
+        }
+    }
+};
+
+Ratings.prototype.hasMyRating = function() {
+    if(this.myRating != null) {
+        return true;
+    }
+    return false;
+};
+
+Ratings.prototype.setInitialStars = function() {
+    var myIntRating = parseInt(this.myRating, 10);
+    var actualRating = this.communityRating;
+    // Determines the decimal value of the rating
+    var decimal = actualRating - parseInt(actualRating, 10);
+    var roundedRating;
+    if ((decimal < .3) || (decimal > .7)) {
+        //If the decimal value is less than .3 the rating is rounded down to the nearest whole number.
+        //If the decimal value is greater than .7 the rating is rounded up to the nearest whole number.
+        roundedRating = Math.round(actualRating);
+    } else {
+        //If the decimal value is between .3 and .7 it is rounded to the nearest .5.
+        roundedRating = parseInt(actualRating, 10) + "-half";
+    }
+
+    if (this.hasMyRating() && this.isShowMyRating) {
+        if (this.isDisableUserSelect) {
+            this.starContainer.className = "starArea ratingDisplayStars mystar" + myIntRating;
+        } else {
+            this.starContainer.className = "starArea mystar" + myIntRating;
+        }
+    } else if (this.isDisableUserSelect) {
+        this.starContainer.className = "starArea ratingDisplayStars communitystar" + roundedRating;
+    }  else {
+        this.starContainer.className = "starArea communitystar" + roundedRating;
+    }
+    return;
+};
+
+Ratings.prototype.clickEvent = function() {
+    if (!this.copy.isDisableUserSelect && (this.index != this.copy.myRating)){
+        //Change the opacity of the stararea
+        $j(this).closest(".starArea").first().animate({"opacity" : "0.30"});
+        //Insert the loading message
+        $j(this).closest(".starArea").first().before("<div class='loadingReview' style='font-weight:bold;position:absolute'>"+IIIGLOBALS.communityUpdatingReviewcode+"<blink>...</blink></div>")
+        //Add the updating class so that which section to update
+        $j(this).closest(".searchResult").first().addClass("updatingUserRating");
+        this.copy.myRating = this.index;
+        this.copy.inputField.value = this.index;
+        this.copy.setInitialStars();
+        tapestry.form.submit(this.copy.formContainer.id, "updateRatingSubmit");
+
+    }
+    return false;
+};
+
+Ratings.prototype.showAverage = function() {
+    this.communityContainer.style.display = "block";
+};
+
+Ratings.prototype.hideAverage = function() {
+    this.communityContainer.style.display = "none";
+};
+
+
+function showAjaxSubmitFeedback(form, clickedElem) {
+    if (form || clickedElem) {
+        var $submitElem, $cancelLinks, contentWrapper;
+
+        if (!form) {
+            contentWrapper = $j(clickedElem).closest("form")[0] || $j(clickedElem).closest("#popInContentWrapper")[0];
+        } else {
+            contentWrapper = form;
+        }
+
+        if (!contentWrapper) { return;}
+
+        $submitElem = $j(".ajaxSubmit", contentWrapper);
+
+        setTimeout(
+            function() {
+                $submitElem.attr("disabled", "disabled")
+                    .addClass("submitLoading")
+                    .removeAttr("onclick")
+                    .removeAttr("href");
+            }, 10)
+        //add submitLoading class to cancel and delete links so a submit indicator/ajax spinner
+        //can be put in place
+        $cancelLinks = $j(".cancel, .delete", contentWrapper);
+        $cancelLinks.removeAttr("onclick")
+            .removeAttr("href")
+            .addClass("submitLoading")
+            .html("");
+    }
+}
+
+
+function performCustomClientSideValidation(form) {
+    //this will be run on all forms that have the class 'customClientSideValidation'
+    //called from tapestry.js in the validateForm function
+    if (form) {
+        //counter to keep track if any of the validations fail
+        var failsValidationCounter = 0;
+        var $form =  $j(form);
+        //manage the validators
+        //what kind of validation is this?
+
+        //email?
+        if ($form.hasClass('customEmailFormValidation')) {
+            //email entry
+            $j(".emailTextInput",form).each(function(index, node) {
+                var $prevErrorNode = $j(node).prev('.emailInputError');
+                if (!EmailFormValidator.validation(node)) {
+                    //already an error message?
+                    //show and hide to indicate error still exists
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.fadeOut(100).fadeIn(100);
+                    } else {
+                        $j("<p class=\"formValidationError emailInputError\">" + EmailFormValidator.emailInputErrorMessage + "</p>").insertBefore(node);
+                    }
+                    failsValidationCounter++;
+                }  else {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.remove();
+                    }
+                }
+            })
+        }
+
+        // dropdown check
+        if ($form.hasClass('selectFormValidation')) {
+            $j(".selectTextInput",form).each(function(index, node) {
+                var $prevErrorNode = $j(node).prev('.emailInputError');
+                if (!SelectFormValidator.selectValidation(node)) {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.fadeOut(100).fadeIn(100);
+                    } else {
+                        $j("<p class=\"formValidationError emailInputError\">" + SelectFormValidator.selectErrorMessage + "</p>").insertBefore(node);
+                    }
+                    failsValidationCounter++;
+                }  else {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.remove();
+                    }
+                }
+            })
+
+            $j(".selectLoanInput",form).each(function(index, node) {
+                var $prevErrorNode = $j(node).prev('.emailInputError');
+                if (!SelectFormValidator.loanValidation(node)) {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.fadeOut(100).fadeIn(100);
+                    } else {
+                        $j("<p class=\"formValidationError emailInputError\">" + SelectFormValidator.selectLoanErrorMessage + "</p>").insertBefore(node);
+                    }
+                    failsValidationCounter++;
+                }  else {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.remove();
+                    }
+                }
+            })
+
+        }
+
+        //communityTags?
+        if ($form.hasClass('customTagFormValidation')) {
+            //email entry
+            $j(".communityTagsTextInput",form).each(function(index, node) {
+                var $prevErrorNode = $j(node).prev('.tagInputError');
+                if (!TagFormValidator.tagInputValidation(node)) {
+                    //already an error message?
+                    //show and hide to indicate error still exists
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.fadeOut(100).fadeIn(100);
+                    } else {
+                        $j("<p class=\"formValidationError tagInputError\">" + TagFormValidator.tagInputErrorMessage + "</p>").insertBefore(node);
+                    }
+                    failsValidationCounter++;
+                }  else {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.remove();
+                    }
+                }
+            })
+        }
+        //report abuse form?
+        if ($form.hasClass('customReportAbuseFormValidation')) {
+            //abuse entry
+            $j(".reportAbuseTextInput",form).each(function(index, node) {
+                var $prevErrorNode = $j(node).prev('.reportAbuseInputError');
+                if (!ReportAbuseFormValidator.reportAbuseInputValidation(node)) {
+                    //already an error message?
+                    //show and hide to indicate error still exists
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.fadeOut(100).fadeIn(100);
+                    } else {
+                        $j("<p class=\"formValidationError reportAbuseInputError\">" + ReportAbuseFormValidator.reportAbuseInputErrorMessage + "</p>").insertBefore(node);
+                    }
+                    failsValidationCounter++;
+                }  else {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.remove();
+                    }
+                }
+            })
+        }
+        //dateFacet?
+        if ($form.hasClass('customDateFacetInputValidation')) {
+            //email entry
+            $j("#endYear",form).each(function(index, node) {
+                var $prevErrorNode = $j('.dateInputError', form);
+                var startYearElem = $j("#startYear", form)[0];
+                if (!DateFacetValidator.dateFacetValidation(startYearElem, node) ) {
+                    //already an error message?
+                    //show and hide to indicate error still exists
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.fadeOut(100).fadeIn(100);
+                    } else {
+                        $j("<p class=\"formValidationError dateInputError\">" + DateFacetValidator.dateInputErrorMessage + "</p>").insertBefore(startYearElem);
+                    }
+                    failsValidationCounter++;
+                }  else {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.remove();
+                    }
+                }
+            })
+        }
+        //review form?
+        if ($form.hasClass('customReviewFormValidation')) {
+            //ratings
+            $j(".ratingsInput",form).each(function(index, node) {
+                var $prevErrorNode = $j(node).prev('.ratingsError');
+                if (!ReviewFormValidator.ratingsValidation(node)) {
+                    //already an error message?
+                    //show and hide to indicate error still exists
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.fadeOut(100).fadeIn(100);
+                    } else {
+                        $j("<p class=\"formValidationError ratingsError\">" + ReviewFormValidator.ratingsErrorMessage + "</p>").insertBefore(node);
+                    }
+                    failsValidationCounter++;
+                }  else {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.remove();
+                    }
+                }
+            })
+            //review headline
+            $j(".reviewHeadlineInput",form).each(function(index, node) {
+                var $prevErrorNode= $j(node).prev('.headlineError');
+                if (!ReviewFormValidator.headlineValidation(node)) {
+                    //already an error message?
+                    //show and hide to indicate error still exists
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.fadeOut(100).fadeIn(100);
+                    } else {
+                        $j("<p class=\"formValidationError headlineError\">" + ReviewFormValidator.headlineErrorMessage + "</p>").insertBefore(node);
+                    }
+                    failsValidationCounter++;
+                }  else {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.remove()
+                    }
+                }
+            })
+            //review body/text
+            $j(".reviewTextInput",form).each(function(index, node) {
+                var $prevErrorNode = $j(node).prev('.reviewTextError');
+                if (!ReviewFormValidator.textValidation(node)) {
+                    //already an error message?
+                    //show and hide to indicate error still exists
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.fadeOut(100).fadeIn(100);
+                    } else {
+                        $j("<p class=\"formValidationError reviewTextError\">" + ReviewFormValidator.textErrorMessage + "</p>").insertBefore(node);
+                    }
+                    failsValidationCounter++;
+                } else {
+                    if ($prevErrorNode.length) {
+                        $prevErrorNode.remove()
+                    }
+                }
+            })
+        }
+
+
+    }
+    //if anything did not validate we need to stop the ajax request by returning false
+    if (failsValidationCounter > 0) {
+        return false;
+    } else {
+        //show ajaxSpinner
+        showAjaxSubmitFeedback(form);
+        return true;
+    }
+}
+
+
+
+var EmailFormValidator = {
+
+    //this property will be provided a value in the body of the page (in EmailFormValidation.script) - for i18n
+    emailInputErrorMessage:"",
+
+    // RegEx based on email validator described here: http://www.regular-expressions.info/email.html
+    EmailRegExp: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.(?:[A-Za-z]{2}|com|org|net|eus|edu|gov|mil|biz|cat|coop|info|int|mobi|name|pro|tel|travel|aero|asia|jobs|museum|xxx)$/,
+
+    validateEmail: function(email) {
+        if (this.EmailRegExp.test(email.toLowerCase())) {
+            return true;
+        } else {
+            return false;
+        }
+    },
+
+    validation: function(emailInput)  {
+        var inputElem;
+
+        //if a string is passed in, it is assumed to be an Id
+        if (typeof emailInput == "string") {
+            inputElem = dojo.byId(emailInput);
+        }  else {
+            inputElem = emailInput;
+        }
+
+        if (!inputElem) { return true; }
+
+        var val = inputElem.value;
+        var emailArray= val.split(",");
+
+        for(var i=0; i < emailArray.length; i++)
+        {
+            var validEmail = EmailFormValidator.validateEmail(dojo.trim(emailArray[i]))
+            if (!validEmail)
+            {
+                return false;
+            }
+
+        }
+        //Looks like it validates - close the window
+        if (IIIGLOBALS.isGoldSkin){
+            displaySubmissionConfirmation('emailDialogContentWrapper','emailSubmissionConfirmMessage', true);
+            return true;
+        } else {
+            displaySubmissionConfirmation('emailDialogContentWrapper','emailSubmissionConfirmMessage');
+            return true;
+        }
+
+    }
+
+}
+
+
+var SelectFormValidator = {
+    selectErrorMessage:"",
+
+    selectValidation: function(node) {
+        if (node.value == "0") {
+            return false;
+        }  else {
+            return true;
+        }
+    },
+
+    loanValidation: function(node) {
+        if (node.value == "0") {
+            return false;
+        }  else {
+            return true;
+        }
+    }
+}
+
+
+var ReviewFormValidator = {
+
+    //these property default values will be overridden in the body of the page (in CustomReviewFormValidation.script)
+    //- for configuration and i18n
+    ratingsErrorMessage:"",
+    headlineErrorMessage:"",
+    textErrorMessage:"",
+    headlineMinLength: 1,
+    textMinLength: 1,
+
+    ratingsValidation: function(node) {
+        if (!node.value || node.value == 0) {
+            return false;
+        }  else {
+            return true;
+        }
+    },
+
+    headlineValidation: function(node) {
+        if (!node.value || node.value.length < this.headlineMinLength) {
+            return false;
+        } else {
+            return true;
+        }
+
+    },
+
+    textValidation: function(node) {
+        if (!node.value || node.value.length < this.textMinLength) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+
+}
+
+var TagFormValidator = {
+
+    //these property default values will be overridden in the body of the page (in CustomReviewFormValidation.script)
+    //- for configuration and i18n
+    tagInputErrorMessage:"",
+    tagInputTextMinLength: 1,
+    tagInputTextMaxLength: 75,
+
+    tagInputValidation: function(node) {
+        if (!node.value || node.value.length < this.tagInputTextMinLength || node.value.length > this.tagInputTextMaxLength) {
+            return false;
+        }  else {
+            return true;
+        }
+    }
+}
+
+
+var ReportAbuseFormValidator = {
+
+    //these property default values will be overridden in the body of the page (in CustomReportAbuseFormValidation.script)
+    //- for configuration and i18n
+    reportAbuseInputErrorMessage:"",
+    reportAbuseInputTextMinLength: 1,
+
+    reportAbuseInputValidation: function(node) {
+        if (!node.value || node.value.length < this.reportAbuseInputTextMinLength) {
+            return false;
+        }  else {
+            return true;
+        }
+    }
+}
+
+
+var DateFacetValidator = {
+
+    //these property default values may be overridden in the body of the page
+    //- for configuration and i18n
+
+    dateInputErrorMessage:"",
+    dateInputRegEx: /^[0-9]{1,4}$/,
+
+    //include startYearInputElem to check the end year value to make sure it's greater
+    //than the startYear
+    dateFacetValidation: function(startYearInput, endYearInput) {
+
+        if (!startYearInput.value || !endYearInput.value || !DateFacetValidator.dateInputRegEx.test(startYearInput.value) || !DateFacetValidator.dateInputRegEx.test(endYearInput.value)) {
+            return false;
+        } else {
+            //date range validation - end year needs to be greater than start year
+            if (parseInt(startYearInput.value) - parseInt(endYearInput.value) > 0 ) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+function displaySubmissionConfirmation(formWrapperElemId, confirmMessageElemId, disableFading) {
+    var formWrapper = dojo.byId(formWrapperElemId);
+    var subConfirmMess = dojo.byId(confirmMessageElemId);
+    if (!formWrapper || !subConfirmMess) {return;}
+    if (formWrapper) {
+        if (disableFading) {
+            //just show and hide - no effect
+            setTimeout(function() {
+                dojo.style(formWrapper, 'display', 'none');
+                dojo.style(subConfirmMess, 'display', 'block');
+                dojo.style(subConfirmMess, 'opacity','1');
+            }, 750);
+        } else {
+            //fadeOut form
+            var fadeArgs1 = {
+                node:formWrapper,
+                duration: 200,
+                onEnd: function() {
+                    dojo.style(formWrapper, 'display', 'none');
+                    dojo.style(subConfirmMess, 'display', 'block');
+                    //fadeIn message
+                    var fadeArgs2 = {
+                        node: subConfirmMess,
+                        duration: 200
+                    }
+                    dojo.fadeIn(fadeArgs2).play();
+                }
+            }
+            dojo.fadeOut(fadeArgs1).play();
+            setTimeout("dijit.byId('dialogComponent').hide()", 2500);
+            setTimeout("dijit.byId('dialogComponent').hide()", 2500);
+        }
+    }
+}
+
+function scrollUpToTopOfElement(jquerySelector) {
+    if (typeof jquerySelector === "string") {
+        var $elem = $j(jquerySelector);
+        if ($elem.length) {
+            if ($j(window).scrollTop() >= $elem.offset().top) {
+                $j(window).scrollTop($elem.offset().top - 25);
+            }
+        }
+    }
+}
+
+function setPatronOverlayTimeout() {
+    $j(document).on("click", ".accountFunctionsMenu a", function(){
+        patronTimeout = setTimeout(function() {
+            $j(".patron-function-overlay").show();
+        }, 2000)
+    });
+}
+
+function removePatronOverlayTimeout() {
+    if (typeof patronTimeout != "undefined") {
+        clearTimeout(patronTimeout);
+    }
+}
+
+//private patron page function for formatting iframe
+function restylePatronAccountIframeContent(elem, encoreServerURL) {
+
+    function customStyledIframe (iframeEl) {
+        var $accountIframe = $j(iframeEl);
+
+        try {
+
+            //remove existing styles
+            $accountIframe.contents().find('link').remove();
+
+            //find local custom stylesheet in the parent
+            var parentHeadElem = $j("head")[0];
+
+            if (parentHeadElem) {
+                var $parentCSSElems = $j("link[rel=stylesheet]", parentHeadElem ).filter(function(index) {
+                    //pattern matching on link elem href beginning with local/ and ending with /styles.css
+                    //this is the custom styles stylesheet
+                    return $j(this).attr("href").match(/^local\/.+\/styles.css$/);
+                })
+            }
+
+            //add style sheet
+            var encorePatronCssUrl = [encoreServerURL, '/resources/patron/patron.css'].join('');
+            $accountIframe.contents().find('head').append('<link rel="stylesheet" href="' + encorePatronCssUrl + '" type="text/css" />');
+
+            //add site custom stylesheet
+            $parentCSSElems.each(function(index) {
+                var encoreParentCssUrl = [encoreServerURL, '/', $parentCSSElems.attr("href")].join('');
+
+                $accountIframe.contents().find('head').append('<link rel="stylesheet" href="' + encoreParentCssUrl +'" type="text/css" />');
+            });
+
+            //hide ratings
+            var $ratingCells = $accountIframe.contents().find('.patFuncEntry > .patFuncRating');
+            if ($ratingCells.length) {
+                var $iframeContents = $accountIframe.contents(),
+                    $entryCells     = $iframeContents.find('.patFuncEntry > :not(input:hidden)'),
+                    ratingCellIndex = $entryCells.index($ratingCells.first()),
+                    ratingsHeader   = $iframeContents.find('th.patFuncHeaders').get(ratingCellIndex);
+
+                $j(ratingsHeader).addClass("patFuncRating");
+            }
+
+            //hide links that open up in webpac in the iframe
+            $accountIframe.contents().find("a[href^='/search']").css("display", "none");
+
+            //resize iframe to contents
+            $accountIframe.height($accountIframe.contents().find('body').height() + 50);
+
+        } catch(e) {
+            console.error('Encore can not customize iframe. \n Stack: ', e);
+        }
+    }
+
+    function rewriteLinks (iframeEl) {
+        var $accountIframe = $j(iframeEl);
+
+        try {
+
+            //open links to encore in parent frame
+            $accountIframe.contents().find("a[href^='https:']").attr("target", "_parent");
+
+            //rewrite links so /dp gets prepended to hrefs starting with /patroninfo
+            $accountIframe.contents().find("a[href^='/patroninfo']").each(function() {
+                var currentHref = $j(this).attr("href");
+                $j(this).attr("href", "/dp" +currentHref);
+            });
+
+        } catch(e) {
+            console.error('Encore can not rewrite links into iframe. \n Stack: ', e);
+        }
+    }
+
+    function rewriteUrls (iframeEl) {
+        var $accountIframe = $j(iframeEl);
+
+        try {
+
+            //rewrite urls starting with /patroninfo in onclick attributes
+            $accountIframe.contents().find("[onclick*='/patroninfo']").each(function() {
+                var currentOnClickValue = $j(this).attr("onclick");
+                $j(this).attr("onclick", currentOnClickValue.replace(/\/patroninfo/, "/dp/patroninfo"));
+            });
+
+            //rewrite urls starting with /patroninfo in onsubmit attributes
+            $accountIframe.contents().find("form[onsubmit*='/patroninfo']").each(function() {
+                var currentOnSubmitValue = $j(this).attr("onsubmit");
+                $j(this).attr("onsubmit", currentOnSubmitValue.replace(/\/patroninfo/, "/dp/patroninfo"));
+            });
+
+        } catch(e) {
+            console.error('Encore can not rewrite ulrs into iframe. \n Stack: ', e);
+        }
+    }
+
+    // Holds - We need to update the holds numbers in the menu when the holds form is loaded
+    function updateHoldsNumbersInMenu () {
+        setTimeout(function() {
+            $j("#refreshHoldsMenuDirectLinkComponent").trigger("click");
+        },1000);
+    }
+
+    // Bookings - We need to update the bookings numbers in the menu when the bookings form is loaded
+    function updateBookingsNumbersInMenu () {
+        setTimeout(function(){
+            $j("#refreshBookingsMenuDirectLinkComponent").trigger("click");
+        },1000);
+    }
+
+    //
+    // WARN: It can throws exception about 'Blocked a frame from accessing a cross-origin frame.'
+    //
+    // My List and Reading History - open export into new tab because the link redirects to webpac
+    // that does not use a custom form
+    function addedOpenExportIntoNewTab(iframeEl) {
+        var $accountIframe = $j(iframeEl);
+
+        $accountIframe.contents().find("[onclick*='export=true']").each(function(index) {
+            var origOnclickVal = $j(this).attr("onclick");
+
+            //return value of parens in replace_or_redraw function in the onclick eventhandler
+            //example: onclick= "return replace_or_redraw('/patroninfo~S1*eng/2183475/mylists' + '?sort=date&export=true&listNum=118')"
+            //first part of string from opening parens to mylists, second part is from ? to end parens
+            //rewriting href for cross browser compatibility
+            var firstUrlArgStringPart = origOnclickVal.match(/\('.*mylists/)|| origOnclickVal.match(/\('.*readinghistory/);
+            var secondUrlArgStringPart = origOnclickVal.match(/\?.*\)/);
+
+            if (firstUrlArgStringPart && secondUrlArgStringPart) {
+                var modifiedFirstUrlArgStringPart = firstUrlArgStringPart[0].replace(/\/dp\//,"/");
+                var concatURLArgString = modifiedFirstUrlArgStringPart + secondUrlArgStringPart[0];
+
+                //nullify current onclick
+                $j(this).prop("onclick", null).attr("onclick", null);
+                //strip outer parens and construct window.open function
+                var windowOpenURLString = concatURLArgString.substring(2, concatURLArgString.length - 2);
+                $j(this).attr("href", windowOpenURLString).attr("target", "patronNewWindow");
+            }
+        });
+    }
+
+    //
+    // WARN: It can throws exception about 'Blocked a frame from accessing a cross-origin frame.'
+    //
+    // Preferred Searches - Search link need to open in new tab - probably will have /dp prepended from this script.
+    // The /dp also needs to be stripped
+    function addedOpenSearchLinkIntoNewTab (iframeEl) {
+        var $accountIframe = $j(iframeEl);
+
+        $accountIframe.contents().find(".patFuncPSrchBtn a").each(function(index){
+            // replace href beginning with /dp/ with /
+            var modifiedHref = $j(this).attr("href").replace(/^\/dp\//,"/");
+            $j(this).attr("target","patronNewWindow").attr("href", modifiedHref);
+        });
+    }
+
+    //
+    // WARN: It can throws exception about 'Blocked a frame from accessing a cross-origin frame.'
+    //
+    // Checkins - We need to move the renew error message, if it exists, above the buttons
+    function moveRenewErrorMessage (iframeEl) {
+        var $accountIframe = $j(iframeEl);
+
+        $accountIframe.contents().find("#renewfailmsg").prependTo($accountIframe.contents().find("#checkout_form"));
+    }
+
+    var specialCases = {
+        '/holds':          updateHoldsNumbersInMenu,
+        '/bookings':       updateBookingsNumbersInMenu,
+        '/mylists':        addedOpenExportIntoNewTab,
+        '/readinghistory': addedOpenExportIntoNewTab,
+        '/getpsearches':   addedOpenSearchLinkIntoNewTab,
+        '/items':          moveRenewErrorMessage
+    };
+
+    var $accountIframe = $j(elem);
+
+    try {
+
+        customStyledIframe(elem);
+
+        rewriteLinks(elem);
+
+        rewriteUrls(elem);
+
+        //SPECIAL CASES - these modifications are only performed on certain actions/iframes
+
+        //get iframe last directory value - example 'https://example.ii.com/dp/patroninfo*eng/1004198/getpsearches'
+        //matches '/getpsearches'
+        var lastDirectoryOfUrl =  $accountIframe.attr("src").match(/\/\w+$/)[0];
+
+        //
+        // WARN: It can throws exception about 'Blocked a frame from accessing a cross-origin frame.'
+        //
+        if (specialCases[lastDirectoryOfUrl]) {
+            specialCases[lastDirectoryOfUrl](elem);
+        }
+
+        //end SPECIAL CASES
+
+        //
+        // WARN: It can throws exception about 'Blocked a frame from accessing a cross-origin frame.'
+        //
+        //there is a function named startTimeout in the iframe template js which triggers timeout redirects. We never
+        //want to trigger a timeout redirect in the iframe so we will redefine this function to an empty function
+        //set the startTimeout function to an empty function in the iframe js.
+        if (typeof (window.accountContentIframe.startTimeout) == "function") {
+            window.accountContentIframe.startTimeout = function () {};
+        }
+
+        //
+        // WARN: It can throws exception about 'Blocked a frame from accessing a cross-origin frame.'
+        //
+        //Add onunload event to body inside iframe so we can hide the iframe content and restyle it
+        //before it loads again when the user changes pages within the iframe to prevent flashing of unstyled content.
+        // Unload on iframe element does not get called.
+        if (typeof $accountIframe[0].contentWindow != "undefined") {
+            $j($accountIframe[0].contentWindow).on("unload", function() {
+                $accountIframe.removeClass("iframeLoaded").addClass("iframeUnloading");
+            })
+        }
+
+        // WARN: code below can not be execute if was exception above.
+
+    } catch(e) {
+        console.error('Encore has failed iframe manipulation. \n Stack: ', e);
+    }
+
+    //outside of catch: even if iframe manipulation fails we still want to fall back to showing unstyled content
+    //setTimeout to avoid flash of unstyled content
+    setTimeout(function() {
+        $accountIframe.removeClass("iframeUnloading").addClass("iframeLoaded");
+        try  {
+            $accountIframe.height($accountIframe.contents().find('body').height() + 50);
+            //scroll top of account functions into view if they are above the top of the screen
+            scrollUpToTopOfElement("#accountFunctionsContentWrapper");
+        } catch(e) {
+            console.error('fallback iframe fallback fails. \n Stack: ', e);
+        }
+    }, 250);
+}
+
+function printIframeContents() {
+    $j("#patron-function-print-link").click(
+        function() {
+            if ($j("html").hasClass("dj_gecko") || $j("html").hasClass("dj_ie")){
+                if ($j("iframe").length) {
+                    $j("iframe")[0].contentWindow.focus();
+                    $j("iframe")[0].contentWindow.print();
+                }
+                else {
+                    window.print();
+                }
+            }
+            else {
+                window.print();
+            }
+        }
+    );
+}
+
+function viewAllBookcartItems() {
+    $j("#mainContentArea .searchResult .holdingsWrapper.popUpWrapper, #mainContentArea .searchResult .bibHoldingsWrapper.popUpWrapper").addClass("itemsExpandedInline");
+    $j("#viewAllItemsToggle").hide();
+    $j("#hideAllItemsToggle").show();
+    //trigger ajax requests for threshold items by clicking on max item header
+    //that already have click link listeners applied as part of page setup
+    $j(".availableMaxItemsSection, .allMaxItemsSection").each(
+        function(index) {
+            var container  = $j(this).closest(".ItemsContainer")[0];
+            if (container) {
+                $j(".itemsContainerHeader a", container).trigger("click");
+            }
+        }
+    )
+}
+
+function hideAllBookcartItems() {
+    $j("#mainContentArea .searchResult .holdingsWrapper.popUpWrapper, #mainContentArea .searchResult .bibHoldingsWrapper.popUpWrapper").removeClass("itemsExpandedInline");
+    $j("#hideAllItemsToggle").hide();
+    $j("#viewAllItemsToggle").show();
+}
+
+function callNoBrowseProcessImage(imgElem, isForcePlaceholder) {
+    var $img = $j(imgElem), $browseEntry, $itemBookCover;
+    //when the content providers cannot find a bookjacket, they return a 1x1 pixel
+    //we want to replace these images with a bookjacket placeholder with the
+    //book title laid over it
+    if (isForcePlaceholder || ($img.height() == 1 && $img.width() == 1)) {
+        $browseEntry = $img.closest("li");
+        if ($browseEntry.length) {
+            $j(".itemBookCover", $browseEntry)
+                .addClass("bookJacketPlaceholder")
+                .html('<span class="placeholderTitle">' + $j(".shortTitle", $browseEntry ).html() + '</span>')
+        }
+    }
+}
+
+function removeBlankThumbnail(imgElem, isForceRemove) {
+    var $img = $j(imgElem);
+    //when the content providers cannot find a bookjacket, they return a 1x1 pixel
+    //remove the wrapping div, for consistent spacing with other results
+    if ($img.height() == 1 && $img.width() == 1 || isForceRemove) {
+        $img.closest(".itemBookCover").remove();
+    }
+}
+
+function replaceBlankThumbnail(imgElem) {
+    var $img = $j(imgElem);
+    if ($img.height() == 1 && $img.width() == 1) {
+        $img.addClass("placeholder-image");
+        //$browseEntry = $img.closest("div");
+        //if ($browseEntry.length) {
+        // $browseEntry.addClass("bookJacketPlaceholder");
+        //}
+    }
+}
+
+function removeImageElement(imgElem) {
+    $j(imgElem).remove();
+}
+
+function seriesBrowseToggle(toggleElem, isAnimate, forceToggleState) {
+
+    //valid forceToggleState values are "open", "close"
+    var $seriesWrapper = $j(toggleElem).closest(".seriesEntry"), $loadBibsLink;
+
+    if ($seriesWrapper.length) {
+        if ($seriesWrapper.hasClass("opened")) {
+            if (forceToggleState == "open") {
+                return
+            } else {
+                //closeToggle
+                $seriesWrapper.addClass("closed").removeClass("opened");
+                if (isAnimate) {
+                    $j(".seriesBibs", $seriesWrapper).slideUp("fast");
+                } else {
+                    $j(".seriesBibs", $seriesWrapper).css("display", "none");
+                }
+                //add toggle id to global object to track the open and
+                //closed toggles, used for maintaining state of toggles
+                //on dialog ajax update - global var initialized in SeriesListComponent
+                try {
+                    IIIGLOBALS.seriesBrowseToggleStateObject[toggleElem.id] = false;
+                } catch(e) {}
+            }
+        } else {
+            if (forceToggleState == "close") {
+                return
+            }  else  {
+                //openToggle
+                $seriesWrapper.addClass("opened").removeClass("closed");
+                if (isAnimate) {
+                    $j(".seriesBibs", $seriesWrapper).slideDown("fast");
+                } else {
+                    $j(".seriesBibs", $seriesWrapper).css("display", "block");
+                }
+                try {
+                    IIIGLOBALS.seriesBrowseToggleStateObject[toggleElem.id] = true;
+                } catch(e) {}
+            }
+        }
+    }
+}
+
+function openSeriesTargetToggle() {
+    var toggleElem, $targetSeriesIndex, targetSeriesIndexValue;
+    //We want to open the toggle of the target series -  i.e the series from which the user
+    //is launching the series browse
+
+    //Look for the existence of span id="currentRecordBibIndex" - this contains the index of
+    //the target series in the current series browse page list
+
+    //global var to keep track of target series on ajax updates
+    if (IIIGLOBALS.seriesBrowseTargetSeriesIndex != null) {
+        toggleElem = $j("#seriesList .seriesToggle")[IIIGLOBALS.seriesBrowseTargetSeriesIndex];
+    } else {
+        $targetSeriesIndex = $j("#targetSeriesIndex");
+        if ($targetSeriesIndex.length) {
+            targetSeriesIndexValue = parseInt($targetSeriesIndex.text())
+            toggleElem = $j("#seriesList .seriesToggle")[targetSeriesIndexValue];
+            IIIGLOBALS.seriesBrowseTargetSeriesIndex = targetSeriesIndexValue;
+        }
+    }
+
+    if (toggleElem) {
+        $j(toggleElem).closest(".seriesEntry").addClass("targetSeries")
+        //don't want to toggle the element if it already has been closed by user and this
+        //is an ajax update - check global IIIGLOBALS.seriesBrowseToggleStateObject
+        if (!IIIGLOBALS.seriesBrowseToggleStateObject[toggleElem.id]) {
+            seriesBrowseToggle(toggleElem, false)
+        }
+    }
+}
+
+function smoothScrollFromLink(linkElem) {
+    //pass in an anchor element with a hash in the href.
+    //When clicked, the browser will smooth scroll to the
+    //part of the page targeted by the hash
+    var target = linkElem.hash;
+    if (target) {
+        $target = $j(target);
+        $j('html, body').stop().animate({
+            'scrollTop': $target.offset().top
+        }, 500, 'swing', function () {
+            window.location.hash = target;
+        });
+    }
+}
+
+function initOverdriveSampleHover() {
+    // When a thumbnail with an OverDrive sample is hovered over,
+    // an OverDrive "view sample" link displays on top of the
+    // thumbnail. This view sample link takes the width and height
+    // of its respective thumbnail. If the height of the thumbnail
+    // is less than 95px, the view sample link doesn't display
+    // a decorative image. When the thumbnail is hovered off,
+    // the view sample link disappears.
+    $j(".overdrive-sample").hover(
+        function() {
+            var $t = $j(this).find(".overdrive-sample-thumbnail");
+            var $tw = $t.width();
+            var $th = $t.height();
+            var $l = $j(this).find(".overdrive-sample-link");
+            $l.css("width",$tw).css("height",$th).show();
+            if ($th < 95) {
+                var $li = $j(this).find(".overdrive-sample-link-image");
+                $li.hide();
+            }
+        },
+        function() {
+            var $l = $j(this).find(".overdrive-sample-link");
+            $l.hide();
+        }
+    );
+}
+function initEbooksHelpTabs() {
+    // Adapted from Jack Moore's jQuery tabs
+    $j('ul.tab-nav').each(function(){
+        // For each set of tabs, we want to keep track of
+        // which tab is active and it's associated content
+        var $active, $content, $links = $j(this).find('a');
+        // If the location.hash matches one of the links, use that as the active tab.
+        // If no match is found, use the first link as the initial active tab.
+        $active = $j($links.filter('[href="'+location.hash+'"]')[0] || $links[0]);
+        $active.addClass('active');
+        $content = $j($active.attr('href'));
+        // Hide the remaining content
+        $links.not($active).each(function () {
+            $j($j(this).attr('href')).hide();
+        });
+        // Bind the click event handler
+        $j(this).on('click', 'a', function(e){
+            // Make the old tab inactive.
+            $active.removeClass('active');
+            $content.hide();
+            // Update the variables with the new link and content
+            $active = $j(this);
+            $content = $j($j(this).attr('href'));
+            // Make the tab active.
+            $active.addClass('active');
+            $content.show();
+            // Prevent the anchor's default click action
+            e.preventDefault();
+        });
+    });
+}
+
+function initDropdownButton() {
+    //unbind if previously exists
+    $j(document).off('click.dropdownButton');
+    $j(document).off('keydown.dropdownButton');
+
+    var DropdownComponent = function ($item) {
+        var $parent = $item.closest(".button-dropdown-container");
+
+        this.$button = $parent.find(".button-dropdown");
+        this.$content = $parent.find(".button-dropdown-content");
+
+        this.$items = this.$content.find('.button-dropdown-item:not(.button-dropdown-divider) > a');
+
+        this.$item = $item;
+    };
+
+    DropdownComponent.prototype.showList = function () {
+        this.$content.show();
+        this.focusFirstItem();
+    };
+
+    DropdownComponent.prototype.hideList = function () {
+        this.$content.hide();
+    };
+
+    DropdownComponent.prototype.focusOnPrevItem = function () {
+        var index = this.$items.index(this.$item);
+
+        index -= 1;
+
+        (index < 0) ? this.focusLastItem() : this.focusItemByIndex(index);
+    };
+
+    DropdownComponent.prototype.focusOnNextItem = function () {
+        var index = this.$items.index(this.$item);
+
+        index += 1;
+
+        (index >= this.$items.length) ? this.focusFirstItem() : this.focusItemByIndex(index);
+    };
+
+    DropdownComponent.prototype.focusFirstItem = function () {
+        this.focusItemByIndex(0);
+    };
+
+    DropdownComponent.prototype.focusLastItem = function () {
+        var index = 0;
+
+        if (this.$items.length) {
+            index = this.$items.length - 1;
+
+            this.focusItemByIndex(index);
+        }
+    };
+
+    DropdownComponent.prototype.focusItemByIndex = function (index) {
+        var $el = $j(this.$items[index]);
+
+        this.focusItem($el);
+    };
+
+    DropdownComponent.prototype.focusItem = function ($item) {
+        $item.focus();
+    };
+
+    DropdownComponent.prototype.focusOnButton = function () {
+        this.$button.focus();
+    };
+
+
+    function dropdownButtonHandler(event) {
+        var $target = $j(event.target),
+            dropdownComponent;
+
+        // If a dropdown button is clicked, the following identifies
+        // its respective dropdown content.
+        if ($target.is(".button-dropdown,.button-dropdown-arrow")) {
+            event.preventDefault();
+
+            dropdownComponent = new DropdownComponent($target);
+
+            var $content = dropdownComponent.$content;
+            // And if the respective content is hidden, the following
+            // hides all previously open dropdowns and opens the specific
+            // dropdown content.
+            if ($content.is(":hidden")) {
+                $j(".button-dropdown-content").hide();
+
+                dropdownComponent.showList();
+
+                return false;
+                // Else the respective content is open, the following hides
+                // the dropdown content.
+            } else {
+
+                dropdownComponent.hideList();
+
+                return false;
+            }
+            // Else anywhere else on the page is clicked the dropdown content
+            // will hide.
+        } else {
+            $j(".button-dropdown-content").hide();
+        }
+    }
+
+
+
+    $j(document).on('keydown.dropdownButton', '.button-dropdown', function(event) {
+
+        var KEY_CODES = Object.freeze({
+            ENTER: 13,
+            SPACE: 32
+        });
+
+        switch (event.which) {
+            case KEY_CODES.ENTER:
+            case KEY_CODES.SPACE:
+
+                return dropdownButtonHandler.call(this, event);
+
+                break;
+            default:
+                break;
+        }
+
+        return;
+    });
+
+    $j(document).on('keydown.dropdownButton', '.button-dropdown-item a', function(event) {
+
+        var KEY_CODES = Object.freeze({
+            ESC:   27,
+
+            UP:    38,
+            DOWN:  40,
+
+            TAB:       9,
+            SHIFT_TAB: 16
+        });
+
+        var $target           = $j(event.target),
+            dropdownComponent = new DropdownComponent($target);
+
+        switch (event.which) {
+
+            case KEY_CODES.ESC:
+
+                dropdownComponent.hideList();
+                dropdownComponent.focusOnButton();
+
+                break;
+            case KEY_CODES.UP:
+
+                event.stopImmediatePropagation();
+                event.preventDefault();
+
+                dropdownComponent.focusOnPrevItem();
+
+                break;
+            case KEY_CODES.DOWN:
+
+                event.stopImmediatePropagation();
+                event.preventDefault();
+
+                dropdownComponent.focusOnNextItem();
+
+                break;
+            case KEY_CODES.TAB:
+            case KEY_CODES.SHIFT_TAB:
+
+                event.stopImmediatePropagation();
+                event.preventDefault();
+
+                return false;
+
+            default:
+                break;
+        }
+
+        return;
+    });
+
+    // Sets a click event to the page.
+    $j(document).on('click.dropdownButton', '.button-dropdown,.button-dropdown-arrow', dropdownButtonHandler);
+}
+
+function initInfoTooltip() {
+    $j(".info-tooltip-link").click(function() {
+        // Turns off existing tooltip click events
+        $j(document).off("click.infoTooltip");
+        // Sets a click event to the document when you click on the info tooltip link
+        $j(document).on("click.infoTooltip", function(event) {
+            var $target = $j(event.target);
+            // If the info tooltip link is clicked and the tooltip is visible, the following
+            // hides the tooltip and removes the tooltip click event. Else if the info tooltip
+            // link is clicked and the tooltip isn't visible, the following displays the tooltip.
+            if ($target.is(".info-tooltip-link")) {
+                var $tooltip = $target.closest(".info-tooltip-wrapper").find(".info-tooltip");
+                if ($tooltip.is(":visible")) {
+                    $j(".info-tooltip").hide();
+                    $j(document).off("click.infoTooltip");
+                    return false;
+                } else {
+                    // Hides previously opened tooltips.
+                    $j(".info-tooltip").hide();
+                    $tooltip.show();
+                    return false;
+                }
+                // Else if the tooltip is clicked it remains open.
+            } else if ($target.is(".info-tooltip")) {
+                return;
+                // Else anything else is clicked, the following hides the tooltip and removes the
+                // tooltip click event.
+            } else {
+                $j(".info-tooltip").hide();
+                $j(document).off("click.infoTooltip");
+            }
+        });
+    });
+}
+
+/*Plugin for placeholder support across browsers */
+/*
+ * Simple Placeholder by @marcgg under MIT License
+ * Report bugs or contribute on Gihub: https://github.com/marcgg/Simple-Placeholder
+*/
+(function($) {
+    $.simplePlaceholder = {
+        placeholderClass: null,
+
+        hidePlaceholder: function(){
+            var $this = $(this);
+            if($this.val() == $this.attr('placeholder') && $this.data($.simplePlaceholder.placeholderData)){
+                $this
+                    .val("")
+                    .removeClass($.simplePlaceholder.placeholderClass)
+                    .data($.simplePlaceholder.placeholderData, false);
+            }
+        },
+
+        showPlaceholder: function(){
+            var $this = $(this);
+            if($this.val() == ""){
+                $this
+                    .val($this.attr('placeholder'))
+                    .addClass($.simplePlaceholder.placeholderClass)
+                    .data($.simplePlaceholder.placeholderData, true);
+            }
+        },
+
+        preventPlaceholderSubmit: function(){
+            $(this).find(".simple-placeholder").each(function(e){
+                var $this = $(this);
+                if($this.val() == $this.attr('placeholder') && $this.data($.simplePlaceholder.placeholderData)){
+                    $this.val('');
+                }
+            });
+            return true;
+        }
+    };
+
+    $.fn.simplePlaceholder = function(options) {
+        if(document.createElement('input').placeholder == undefined){
+            var config = {
+                placeholderClass : 'placeholding',
+                placeholderData : 'simplePlaceholder.placeholding'
+            };
+
+            if(options) $.extend(config, options);
+            $.extend($.simplePlaceholder, config);
+
+            this.each(function() {
+                var $this = $(this);
+                $this.focus($.simplePlaceholder.hidePlaceholder);
+                $this.blur($.simplePlaceholder.showPlaceholder);
+                $this.data($.simplePlaceholder.placeholderData, false);
+                if($this.val() == '') {
+                    $this.val($this.attr("placeholder"));
+                    $this.addClass($.simplePlaceholder.placeholderClass);
+                    $this.data($.simplePlaceholder.placeholderData, true);
+                }
+                $this.addClass("simple-placeholder");
+                $(this.form).submit($.simplePlaceholder.preventPlaceholderSubmit);
+            });
+        }
+
+        return this;
+    };
+
+})(jQuery);
+
+$j(document).ready(function() {
+    var $bodyElem =   $j("body");
+    IIIGLOBALS.isGoldSkin = $bodyElem.hasClass("gold");
+    IIIGLOBALS.isRecordPage = $bodyElem.hasClass("recordDetailPage");
+    IIIGLOBALS.isRTL = $j("#baseDirectionInsertComponent").attr("dir").toUpperCase() === "RTL";
+    //add right to left direction around all content
+    if (IIIGLOBALS.isRTL) {$bodyElem.attr("dir", "rtl");}
+
+    //add event listeners to items that trigger popInDialog
+    //events added to document so that links added through ajax will get event handlers added
+    $j(document).on("click", "body.recordDetailPage .gridBrowseCol1 .popInDialogTrigger", function(){
+        showPopInDialog(this);
+    });
+
+    $j(document).on("click", "body.reviewsPage .reviewsButton .popInDialogTrigger", function(){
+        showPopInDialog(this)
+    });
+
+    $j(document).on("click", "body.patronAccountPage #reviewsListAnyComponent .popInDialogTrigger", function(){
+        showPopInDialog(this,{resultElemSelector:'.patronReview', contentWrapperSelector:"#accountFunctionsContentWrapper", maskOtherResults:true })
+    });
+
+    $j(document).on("click", "body.patronAccountPage #ebookPatronInfoWrapper .popInDialogTrigger", function(){
+        showPopInDialog(this,{resultElemSelector:'.patronEbookInfoEntry', contentWrapperSelector:"#accountFunctionsContentWrapper", maskOtherResults:true})
+    });
+
+    $j(document).on("click", "body.patronAccountPage .accountSummary .popInDialogTrigger", function(){
+        showPopInDialog(this, {contentWrapperSelector:"#contentColumn"})
+    });
+
+    $j(document).on("click", "#searchResultsAnyComponent .popInDialogTrigger", function(){
+        showPopInDialog(this,{resultElemSelector:'.searchResult', maskOtherResults:true })
+    });
+
+    $j(document).on("click", ".articlesResults .popInDialogTrigger", function(){
+        showPopInDialog(this,{resultElemSelector:'.searchResult', maskOtherResults:true })
+    });
+
+    $j(document).on("click", "body.bookCartPage .searchResult .popInDialogTrigger", function(){
+        showPopInDialog(this,{resultElemSelector:'.searchResult', maskOtherResults:true })
+    });
+
+    $j(document).on("click", "body.bookCartPage #actionToolbar .popInDialogTrigger", function(){
+        showPopInDialog(this,{resultElemSelector:'#actionToolbar',contentWrapperSelector:'#actionToolbar', batchPopIn:true})
+    });
+
+    $j(document).on("click", "body.recordDetailPage .reviewWrapper .popInDialogTrigger", function(){
+        showPopInDialog(this,{resultElemSelector:'.reviewWrapper', contentWrapperSelector:".reviewList", maskOtherResults:true})
+    });
+
+    $j(document).on("click", "body.reviewsPage .reviewWrapper .popInDialogTrigger", function(){
+        showPopInDialog(this,{resultElemSelector:'.reviewWrapper', contentWrapperSelector:".reviewsList", maskOtherResults:true})
+    });
+
+    $j(document).on("click", "body.recordDetailPage .noReviewsLink .popInDialogTrigger", function(){
+        showPopInDialog(this)
+    });
+
+    //fix IE7 z-index issue so items popup display over brief result content
+    //by Chris Coyier
+    if (dojo.isIE == 7) {
+        var zIndexNumber = 5000;
+        $j(".searchResult").each(function() {
+            $j(this).css('zIndex', zIndexNumber);
+            zIndexNumber -= 10;
+        })
+    }
+})
+
+
+function popupLocationFunction(locCode, langCode){
+    var googleMapURL = "";
+
+    dojo.xhrGet({
+        url: "locationURLCalculatorServlet",
+        timeout: 2000,
+        content: {
+            locationCode: locCode,
+            langCode: langCode
+        },
+        load: function(result) {
+            googleMapURL = result ;
+            var newwin = window.open(googleMapURL,'customerlocationpopup','width=700,height=600,status=no,location=no');
+            newwin.focus();
+        }
+    });
+
+    return false;
+
+}
+
+
+$j(document).ready(function() {
+    var initalRawLength = $j('#countComponent').find('input#allCountInsertComponent').val();
+    var initalRawAvailLength =$j('#countComponent').find('input#allAvailCountInsertComponent').val();
+
+    $j("div[id^='allitemsmax-']").find('.itemTableWrapper').find('table.itemTable').find('tbody').find('tr:gt(' + (initalRawLength) + ')').hide();
+
+    var rowCount = $j("div[id^='allitems-']").find('.itemTableWrapper').find('table.itemTable').find('tbody tr').length;
+    var rowCountAvil = $j("div[id^='allavailitems-']").find('.itemTableWrapper').find('table.itemTable').find('tbody tr').length;
+
+    rowCount=rowCount-1;
+    rowCountAvil=rowCountAvil-1;
+
+    if(rowCount > initalRawLength){
+        $j("div[id^='allitems-']").find('.itemTableWrapper').find('table.itemTable').find('tbody').find('tr:gt(' + (initalRawLength) + ')').hide();
+        $j("div[id^='allitems-']").find('.itemTableWrapper').find('#showLess').hide();
+        $j("div[id^='allitems-']").find('.itemTableWrapper').find('#showMore').show();
+    }else{
+        $j("div[id^='allitems-']").find('.itemTableWrapper').find('#showMore').hide();
+        $j("div[id^='allitems-']").find('.itemTableWrapper').find('#showLess').hide();
+    }
+
+    if(rowCountAvil > initalRawLength){
+        $j("div[id^='allavailitems-']").find('.itemTableWrapper').find('table.itemTable').find('tbody').find('tr:gt(' + (initalRawLength) + ')').hide();
+        $j("div[id^='allavailitems-']").find('.itemTableWrapper').find('#showLess').hide();
+        $j("div[id^='allavailitems-']").find('.itemTableWrapper').find('#showMore').show();
+    }else{
+        $j("div[id^='allavailitems-']").find('.itemTableWrapper').find('#showMore').hide();
+        $j("div[id^='allavailitems-']").find('.itemTableWrapper').find('#showLess').hide();
+    }
+
+
+
+
+    $j(document).on("click", ".showAvailableMaxToggleLink", function(){
+        $j("div[id^='allavailitemsmax-']").find('.itemTableWrapper').find('table.itemTable').find('tbody').find('tr:gt(' + (initalRawLength) + ')').hide();
+        $j("div[id^='allavailitemsmax-'] #showLess").hide();
+        $j("div[id^='allavailitemsmax-'] #showMore").show();
+        return false;
+    });
+
+    $j(document).on("click", ".showAvailableToggleLink", function(){
+        if(rowCountAvil > initalRawLength){
+            $j("div[id^='allavailitems-']").find('.itemTableWrapper').find('table.itemTable').find('tbody').find('tr:gt(' + (initalRawAvailLength) + ')').hide();
+            $j("div[id^='allavailitems-'] #showLess").hide();
+            $j("div[id^='allavailitems-'] #showMore").show();
+        }else{
+            $j("div[id^='allavailitems-'] #showLess").hide();
+            $j("div[id^='allavailitems-'] #showMore").hide();
+        }
+        return false;
+    });
+
+
+    $j(document).on("click", "div[id^='allitemsmax-'] #showLess", function(){
+        $j("div[id^='allitemsmax-']").find('.itemTableWrapper').find('table.itemTable').find('tbody').find('tr:gt(' + (initalRawLength) + ')').hide();
+        $j("div[id^='allitemsmax-'] #showLess").hide();
+        $j("div[id^='allitemsmax-'] #showMore").show();
+        return false;
+    });
+
+    $j(document).on("click", "div[id^='allitemsmax-'] #showMore", function(){
+        $j("div[id^='allitemsmax-']").find('.itemTableWrapper').find('tbody').find('tr').css('display', '');
+        $j("div[id^='allitemsmax-'] #showMore").hide();
+        $j("div[id^='allitemsmax-'] #showLess").show();
+        return false;
+    });
+
+    $j(document).on("click", "div[id^='allavailitemsmax-'] #showLess", function(){
+        $j("div[id^='allavailitemsmax-']").find('.itemTableWrapper').find('table.itemTable').find('tbody').find('tr:gt(' + (initalRawAvailLength) + ')').hide();
+        $j("div[id^='allavailitemsmax-'] #showLess").hide();
+        $j("div[id^='allavailitemsmax-'] #showMore").show();
+        return false;
+    });
+
+    $j(document).on("click", "div[id^='allavailitemsmax-'] #showMore", function(){
+        $j("div[id^='allavailitemsmax-']").find('.itemTableWrapper').find('tbody').find('tr').css('display', '');
+        $j("div[id^='allavailitemsmax-'] #showMore").hide();
+        $j("div[id^='allavailitemsmax-'] #showLess").show();
+        return false;
+    });
+
+    $j(document).on("click", "div[id^='allitems-'] #showMore", function(){
+        $j("div[id^='allitems-']").find('.itemTableWrapper').find('tbody').find('tr').css('display', '');
+        $j("div[id^='allitems-'] #showMore").hide();
+        $j("div[id^='allitems-'] #showLess").show();
+        return false;
+    });
+
+    $j(document).on("click", "div[id^='allitems-'] #showLess", function(){
+        $j("div[id^='allitems-']").find('.itemTableWrapper').find('table.itemTable').find('tbody').find('tr:gt(' + (initalRawAvailLength) + ')').hide();
+        $j("div[id^='allitems-'] #showLess").hide();
+        $j("div[id^='allitems-'] #showMore").show();
+        return false;
+    });
+
+
+    $j(document).on("click", "div[id^='allavailitems-'] #showMore", function(){
+        $j("div[id^='allavailitems-']").find('.itemTableWrapper').find('tbody').find('tr').css('display', '');
+        $j("div[id^='allavailitems-'] #showMore").hide();
+        $j("div[id^='allavailitems-'] #showLess").show();
+        return false;
+    });
+
+    $j(document).on("click", "div[id^='allavailitems-'] #showLess", function(){
+        $j("div[id^='allavailitems-']").find('.itemTableWrapper').find('table.itemTable').find('tbody').find('tr:gt(' + (initalRawAvailLength) + ')').hide();
+        $j("div[id^='allavailitems-'] #showLess").hide();
+        $j("div[id^='allavailitems-'] #showMore").show();
+        return false;
+    });
+
+});
+
+$j(document).ready(function() {
+
+    var KEY_CODES = Object.freeze({
+        SPACE: 32
+    });
+
+    var CHECKBOX_LAYOUT = Object.freeze({
+        ariaCheckedAttr:  'aria-checked',
+        jsAriaCheckedSel: '.js-aria-checkbox',
+        linkCheckboxSel:  '.link-checkbox',
+        checkboxSel:      '.link-checkbox__checkbox'
+    });
+
+    function toggleAriaCheckbox ($el) {
+        var currentChecked = $el.attr(CHECKBOX_LAYOUT.ariaCheckedAttr),
+            toggleChecked = currentChecked === 'true' ? 'false' : 'true';
+
+        setAriaCheckbox($el, toggleChecked);
+    }
+
+    function setAriaCheckbox ($el, checked) {
+        if ($el.length) {
+            $el.attr(CHECKBOX_LAYOUT.ariaCheckedAttr, checked);
+        }
+    }
+
+    function setCheckboxCheckedByAriaChecked ($el) {
+        var currentChecked  = $el.attr(CHECKBOX_LAYOUT.ariaCheckedAttr),
+            $checkbox       = $el.closest(CHECKBOX_LAYOUT.linkCheckboxSel).find(CHECKBOX_LAYOUT.checkboxSel),
+            checkedProp     =  {
+                name: 'checked',
+                val:  currentChecked === 'true' ? true : false
+            };
+
+        if ($checkbox.length) {
+            $checkbox.prop(checkedProp.name, checkedProp.val);
+        }
+    }
+
+    $j(document).on('keydown', CHECKBOX_LAYOUT.jsAriaCheckedSel, function (event) {
+        var $el  = $j(this);
+
+        switch (event.which) {
+
+            case KEY_CODES.SPACE:
+
+                toggleAriaCheckbox($el);
+                setCheckboxCheckedByAriaChecked($el);
+
+                event.stopPropagation();
+                event.preventDefault();
+
+                break;
+            default:
+                break;
+        }
+
+    });
+
+    $j(document).on('click', CHECKBOX_LAYOUT.linkCheckboxSel, function (event) {
+        var $linkCheckbox = $j(this),
+            $el = $linkCheckbox.find(CHECKBOX_LAYOUT.jsAriaCheckedSel),
+            $checkbox = $linkCheckbox.find(CHECKBOX_LAYOUT.checkboxSel),
+            isChecked = $checkbox.is(':checked'),
+            ariaChecked  = isChecked ? 'true' : 'false';
+
+        setAriaCheckbox($el, ariaChecked);
+    });
+
+});
+
+$j(document).ready(function() {
+
+    var KEY_CODES = {
+        ENTER: 13
+    };
+
+    var WCAG = {
+        $openerPopup:       null,
+        openerPopupSel:     null,
+        $parentOpenerPopup: null,
+        $openedPopup:       null
+    };
+
+
+    function focusToOpenedPopup (selEl) {
+        var $focusToEl;
+
+        selEl = selEl || '.js-wcag-return-focus';
+
+        if (WCAG.$openedPopup) {
+            $focusToEl = selEl ? WCAG.$openedPopup.find(selEl) : WCAG.$openedPopup;
+
+            $focusToEl.focus();
+
+            WCAG.$openedPopup = null;
+        }
+    }
+
+    function handlerReturnFocusToOpenerPopup () {
+        if (WCAG.$openerPopup) {
+            WCAG.$openerPopup.focus();
+
+            WCAG.$openerPopup = null;
+        }
+
+        if (WCAG.$parentOpenerPopup) {
+            WCAG.$parentOpenerPopup.find(WCAG.openerPopupSel).focus();
+
+            WCAG.openerPopupSel = null;
+            WCAG.$parentOpenerPopup = null;
+        }
+
+        WCAG.$openedPopup = null;
+    }
+
+    $j(document).on('keyup', '.itemsContainerPopUpTrigger a, .popInDialogTrigger, .popUpTrigger, #moreAuthTermsOverlayLink',
+        function (event) {
+            if (event.which == KEY_CODES.ENTER) {
+                WCAG.$openerPopup = $j(this);
+            }
+        }
+    );
+
+    $j(document).on('keyup', '.moreFacetsLink', function(event) {
+        if (event.which == KEY_CODES.ENTER) {
+            WCAG.openerPopupSel = '.moreFacetsLink';
+            WCAG.$openerPopup = $j(this);
+
+            WCAG.$parentOpenerPopup = WCAG.$openerPopup.closest('.facetType');
+
+            WCAG.$openerPopup = null;
+        }
+    });
+
+    $j(document).on('keyup', '.closeLink, .cancel, .closeXButton', function (event) {
+        if (event.which == KEY_CODES.ENTER) {
+            handlerReturnFocusToOpenerPopup();
+        }
+    });
+
+    $j(document).on("popup:closed", function () {
+        handlerReturnFocusToOpenerPopup();
+    });
+
+    $j(document).on('keydown', '.js-wcag-blur', function (event) {
+        if (event.which == KEY_CODES.ENTER) {
+            WCAG.$openedPopup = $j(this).closest('.js-popup-menu.popupDisplayed');
+        }
+    });
+
+    $j(document).on("popup:focus", function (event, selEl) {
+        focusToOpenedPopup(selEl);
+    });
+
+});
+
+$j(document).ready(function() {
+
+    var elSel;
+
+    var FOCUS_WITHIN = {
+
+        isSupport: function () {
+            var isSupport = false;
+
+            try {
+
+                $j(':focus-within');
+                isSupport = true;
+
+            } catch (e) {
+
+                isSupport = false;
+
+            }
+
+            return isSupport;
+        },
+
+        handlers: {
+            hasFocusWithIn: function (event) {
+                $j(this).attr('focus-within', true);
+            },
+
+            noFocusWithIn: function (event) {
+                $j(this).removeAttr('focus-within');
+            }
+        }
+    };
+
+
+    if (!FOCUS_WITHIN.isSupport()) {
+
+        elSel = '.search-result-item';
+
+        $j(document).on('focusin', elSel, FOCUS_WITHIN.handlers.hasFocusWithIn);
+
+        $j(document).on('focusout', elSel, FOCUS_WITHIN.handlers.noFocusWithIn);
+
+    }
+
+});/* VERSION = $Id$ $Rev: 117580 $ $Date: 2010-12-21 02:09:00 +0000 (Tue, 21 Dec 2010) $ */
+var clickLinkDelay=0;
+function clickLink(componentClientId) {
+    var e = document.getElementById(componentClientId);
+    if(!e){
+    	return false;
+    }
+    if(document.createEvent) {
+        var evObj = document.createEvent('MouseEvents');
+        evObj.initEvent('click',true,true);
+        e.dispatchEvent(evObj);
+        return false;
+    }
+    else if(document.createEventObject) {
+        e.fireEvent('onclick');
+        return false;
+    }
+    else {
+        e.click();
+        return false;
+    }
+}

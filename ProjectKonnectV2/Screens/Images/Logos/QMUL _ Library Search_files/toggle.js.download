@@ -1,0 +1,101 @@
+/**
+ * @version $Id$ $Rev: 202541 $ $Date: 2013-02-08 21:48:24 +0000 (Fri, 08 Feb 2013) $
+ */
+
+var itemHoldings = null;
+var checkinHoldings = null;
+var ermHoldings = null;
+var programSection = null;
+var volumeHoldings = null;
+var altHoldings = null;
+
+function instantiateToggleWidgets() {
+
+                dojo.query(".VolumeContainer").forEach(function(node)  {
+                volumeHoldings = new ToggleWidget(node, "resources/cobalt/images/closed.png",
+                "resources/cobalt/images/open.png");})
+
+    //Disable toggles on record detail page in cobalt skin
+    if (!dojo.hasClass(dojo.body(), "recordDetailPage")) {
+
+                dojo.query(".ToggleContainer").forEach(function(node){
+                itemHoldings = new ToggleWidget(node, "resources/cobalt/images/closed.png",
+    "resources/cobalt/images/open.png","inline");})
+
+                
+                dojo.query(".ThresholdContainer").forEach(function(node)  {
+    new ToggleWidget(node, "resources/cobalt/images/closed.png",
+    "resources/cobalt/images/open.png","inline");})
+
+                
+                dojo.query(".CheckinContainer").forEach(function(node)  {
+    checkinHoldings = new ToggleWidget(node, "resources/cobalt/images/closed.png",
+    "resources/cobalt/images/open.png","inline");})
+
+                dojo.query(".SectionContainer").forEach(function(node)  {
+		programSection = new ToggleWidget(node, "resources/cobalt/images/closed.png",
+ 		"resources/cobalt/images/open.png");
+                programSection.setOpenDisplay(1);})
+                
+                dojo.query(".ERMContainer").forEach(function(node)  {
+                ermContainer = new ToggleWidget(node, "resources/cobalt/images/closed.png",
+                "resources/cobalt/images/open.png");
+                ermContainer.setOpenDisplay(1);})
+                
+                dojo.query(".altHoldingsContainer").forEach(function(node)  {
+                altHoldings = new ToggleWidget(node, "resources/cobalt/images/closed.png",
+                "resources/cobalt/images/open.png");})
+                
+                dojo.query(".orderedCopies").forEach(function(node)  {
+                orderedCopies = new ToggleWidget(node, "resources/cobalt/images/closed.png",
+    "resources/cobalt/images/open.png");})
+
+    }
+    else{ //on record detail, hide section headers without data
+        var s = "";
+        var contentNode = null;
+        dojo.query(".ToggleContainer").forEach(function(node){
+            if (document.all) //ie
+            {
+                contentNode = dojo.query('.content',node)[0];
+                if (contentNode) {
+                    s = dojo.trim(contentNode.innerText);
+                    if(s == ""){
+                        dojo.style(node,"display","none");
+                    }
+                }
+            }
+            else
+            {
+                contentNode = dojo.query('.content',node)[0];
+                if (contentNode) {
+                    s = dojo.trim(contentNode.textContent);
+                    if(s == ""){
+                        dojo.style(node,"display","none");
+                    }
+                }
+            }
+        });
+    }
+                
+}
+
+if (document.addEventListener) {
+                document.addEventListener("DOMContentLoaded", instantiateToggleWidgets, false );
+} else {
+
+/*@cc_on @*/
+/*@if (@_win32 || @_win64)
+  document.write("<script id=__ie_onload defer src=\"//:\"><\/script>");
+  var script = document.getElementById("__ie_onload");
+  script.onreadystatechange = function() {
+    if (this.readyState == "complete") {
+      instantiateToggleWidgets(); // call the onload handler
+    }
+  };
+
+/*@end @*/
+}
+
+
+

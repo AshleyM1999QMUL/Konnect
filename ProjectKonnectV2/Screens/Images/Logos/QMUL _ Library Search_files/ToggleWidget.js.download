@@ -1,0 +1,395 @@
+/**
+ * @version $Id$ $Rev: 256700 $ $Date: 2016-07-30 11:46:46 +0000 (Sat, 30 Jul 2016) $
+ */
+//Setting ToggleStateArrayin global scope  to keep track of toggle states -  used for ajax updates like in articles facets - see  maintainToggleState
+var IIIToggleStateArray = [];
+
+var ToggleWidget = function (el, closedImage, openImage, display, imagePlacement, maintainToggleState) {
+    this.element = null;
+	this.openImage = openImage;
+	this.closedImage = closedImage;
+	this.display = (display) ? display : "inline";
+	this.imagePlacement = (imagePlacement) ? imagePlacement : "left";
+    /*
+	 *   if maintainToggleState set to true then keeps track of open and closed state
+     *   of the toggle. Used when performing ajax updates on a toggle so it does not close on update.
+     *
+     */
+    this.maintainToggleState = maintainToggleState;
+	this.labels = {};
+	this.contents = {};
+	this.toggles = {};
+	this.labelContainer = null;
+	this.contentContainer = null;
+	this.togObj = null;
+	this.count=0;
+
+	this.init(el);
+};
+
+ToggleWidget.prototype.init = function (el) {
+    if (typeof el == "string") {
+        var elId = el;
+        el = document.getElementById(el);
+        if (! el) {
+          el = document.createElement("DIV");
+          el.id = elId;
+        }
+    }
+
+	this.element = el;
+	var childNodes = this.element.childNodes;
+
+	var NODE_TYPES = Object.freeze({
+        ELEMENT: 1
+    });
+
+	if (childNodes) {
+
+	    var child;
+	    for(var i=0; child=childNodes[i]; i++) {
+
+	        if(child.nodeType === NODE_TYPES.ELEMENT) {
+
+	            if (child.className == "label") {
+
+			 	    this.count++;
+			 	    child.id=this.element.id+"toggle"+this.count ;
+
+				    this.labels[child.id ] = child;
+
+			    } else if(child.className.indexOf("content") != -1) {
+
+	                child.id = this.element.id+"toggle"+this.count ;
+				    this.contents[child.id] = child;
+
+			    }
+		    }
+		}
+
+		for(var label in this.labels) {
+            var toggle = new ToggleItem( label, this.labels[label], this.contents[label], this.maintainToggleState  );
+            this.toggles[label] = toggle;
+		}
+
+        if(this.toggles) {
+            this.render();
+        }
+	}
+};
+
+ToggleWidget.prototype.setDisplay = function(display)
+{
+	this.display = display;
+}
+ToggleWidget.prototype.setClosedImage = function(closedImage)
+{
+		this.closedImage = closedImage;
+}
+ToggleWidget.prototype.setOpenImage = function(openImage)
+{
+		this.openImage = openImage;
+}
+ToggleWidget.prototype.getImage = function(bool)
+{
+		if(bool) {
+			return this.openImage;
+		} else {
+			return this.closedImage;
+		}
+}
+ToggleWidget.prototype.hasImages = function()
+{
+		if(this.closedImage == null || this.openImage == null) {
+			return false;
+		}
+		return true;
+}
+
+ToggleWidget.prototype.setImageAltText = function(imageAltText) {
+    for(var t in this.toggles) {
+        var toggleItem = this.toggles[t];
+
+        if (toggleItem && toggleItem.image) {
+            toggleItem.image.alt = imageAltText;
+        }
+    }
+};
+
+ToggleWidget.prototype.render = function () {
+    for(var t in this.toggles) {
+        var toggleItem = this.toggles[t];
+
+        //attach a Model to the DOM node
+        toggleItem.label.togObj = this;
+        toggleItem.label.style.display="inline";
+        // events
+        toggleItem.label.onclick = this.handleClick;
+        toggleItem.label.onmouseover = function() {
+            this.style.cursor='pointer';
+        };
+
+        //set the image as a member of the toggleitem not the togglewidget
+        if( this.hasImages() )	{
+            var tmpImage = document.createElement("IMG");
+            tmpImage.src = this.getImage( toggleItem.state );
+            tmpImage.id =  toggleItem.id;
+            tmpImage.className =  "toggleImage";
+            tmpImage.alt = 'Toggle Image';
+            tmpImage.width = "14";
+            tmpImage.height = "14";
+            tmpImage.setAttribute('role', 'button');
+            tmpImage.setAttribute('aria-controls', toggleItem.content.id);
+            tmpImage.setAttribute('aria-labelledby', toggleItem.label.id);
+            tmpImage.tabIndex = 0;
+            tmpImage.togObj = this;
+            toggleItem.image = tmpImage;
+
+            toggleItem.image.onmouseover = function() {
+                this.style.cursor='pointer';
+            }
+        }
+
+        if(this.display == "inline") {
+
+            if (this.labelContainer == null) {
+                this.labelContainer = document.createElement("DIV");
+                this.labelContainer.id = this.element.id+"Labels";
+            }
+
+            if (this.contentContainer == null) {
+                this.contentContainer = document.createElement("DIV");
+                this.contentContainer.id = this.element.id+"Contents";
+            }
+            this.labelContainer.style.display = this.display;
+
+            try {
+                this.labelContainer.appendChild(toggleItem.label);
+
+                if (this.hasImages())  {
+                    var anchors = toggleItem.label.getElementsByTagName("A");
+
+                    if(anchors.length > 0)	{
+
+                        for (var i = 0; i < anchors.length; i++) {
+                            var anchorElem = anchors[i];
+                            this.addImage( anchorElem, toggleItem.image, anchorElem.firstChild );
+                        }
+
+                    } else {
+
+                        toggleItem.image.onclick = this.handleClick;
+                        toggleItem.image.onkeypress = this.handleKeypress;
+
+                        this.addImage( this.labelContainer, toggleItem.image, toggleItem.label);
+
+                    }
+                }
+
+                this.element.appendChild(this.labelContainer);
+                this.contentContainer.appendChild(toggleItem.content);
+                this.element.appendChild(this.contentContainer);
+
+            } catch (ex) {
+                alert("ToggleWidget.render():inline display:"+ex.message);
+            }
+
+        } else {
+
+            if( this.hasImages() ) {
+
+                try{
+
+                    toggleItem.image.onclick = this.handleClick;
+                    toggleItem.image.onkeypress = this.handleKeypress;
+
+                    this.addImage( this.element, toggleItem.image);
+
+                } catch( ex ) {
+                    alert("ToggleWidget.render():block display image:"+ex.message);
+                }
+
+            }
+
+            try {
+
+                this.element.appendChild(toggleItem.label);
+                this.element.appendChild(toggleItem.content);
+
+            } catch( ex ) {
+                alert("ToggleWidget.render():block display:"+ex.message);
+            }
+        }
+
+        this.element.style.display = this.display;
+    }
+};
+
+ToggleWidget.prototype.addImage = function(parent, newElem, afterElem) {
+  try {
+	if(this.imagePlacement == "left" ) {
+		if(afterElem) {
+		  parent.insertBefore(newElem, afterElem );
+		} else {
+		  parent.insertBefore(newElem,parent.firstChild);
+		}
+	} else {
+		parent.firstChild.appendChild(newElem);
+	}
+   } catch(ex) {
+	 alert("ToggleWidget.render():toggle image:"+ex.message);
+   }
+};
+
+ToggleWidget.prototype.toggleExpand = function() {
+	var my = this.togObj;
+	var currentItem = my.toggles[this.id];
+
+	for(var t in my.toggles) {
+		var toggleItem = my.toggles[t];
+		if(t != currentItem.id) {
+			toggleItem.close( my.getImage( false ) );
+		}
+	}
+
+	if(!currentItem.getState()) {
+		currentItem.open( my.getImage( true ) );
+	} else {
+		currentItem.close( my.getImage( false ) );
+	}
+};
+
+ToggleWidget.prototype.setOpenDisplay = function( index ) {
+    var matchedToggle =  this.toggles[this.element.id+"toggle1"];
+
+    if (this.maintainToggleState && (typeof IIIToggleStateArray != 'undefined') && (typeof IIIToggleStateArray[matchedToggle.id] != 'undefined') ) {
+
+
+          if (IIIToggleStateArray[matchedToggle.id] == true) {
+            matchedToggle.open( this.getImage( true ), true );
+        } else {
+            matchedToggle.close( this.getImage( false ), true );
+        }
+
+    } else {
+
+        var currentItem = this.toggles[this.element.id+"toggle"+index];
+        if(!currentItem) return false;
+        if(!currentItem.getState()) {
+                currentItem.open( this.getImage( true ), true );
+        } else {
+                currentItem.close( this.getImage( false ), true );
+        }
+    }
+
+	return true;
+};
+
+/* EVENT HANDLERS */
+ToggleWidget.prototype.handleKeypress = function (event) {
+    var KEY_KODES = Object.freeze({
+        ENTER: 13
+    });
+
+    switch (event.keyCode) {
+
+        case KEY_KODES.ENTER:
+
+            this.togObj.toggleExpand.apply(this);
+
+            event.stopPropagation();
+            event.preventDefault();
+
+            break;
+        default:
+            break;
+    }
+
+};
+
+ToggleWidget.prototype.handleClick = function () {
+    this.togObj.toggleExpand.apply(this);
+};
+
+
+
+/* ToggleItem */
+var ToggleItem = function (id, label,content, maintainToggleState) {
+	this.id = id;
+	this.label = label;
+	this.content = content;
+	this.content.id = id+"Content";
+	//Overwrite classname - the css display setting has to be handled
+	//in this script for wipeIn/wipeOut to work
+	this.content.className = "toggleContent";
+	this.content.style.display = 'none';
+	this.className = this.label.className;
+	this.image = null;
+	this.state = false; //false=closed
+    this.maintainToggleState = maintainToggleState
+};
+
+ToggleItem.prototype.setState = function(state) {
+	this.state = state;
+};
+
+ToggleItem.prototype.getState = function() {
+	return this.state;
+};
+
+ToggleItem.prototype.close = function( img, disableAnimation ) {
+
+	if(img){
+		this.image.src = img;
+        this.image.setAttribute('aria-expanded', 'false');
+	}
+	this.setState(false);
+	this.content.style.position = "relative";
+
+	if (disableAnimation) {
+        this.content.style.display = "none";
+    } else {
+        dojo.require("dojo.fx");
+        var wipeOut = dojo.fx.wipeOut({
+            node: this.content,
+            duration: 300
+        });
+        wipeOut.play();
+    }
+
+	this.label.style.position = "relative";
+	this.label.className = this.className+" closed";
+
+	if (this.maintainToggleState && (typeof IIIToggleStateArray != 'undefined')) {
+		IIIToggleStateArray[this.id]  = false;
+	}
+};
+
+ToggleItem.prototype.open = function( img, disableAnimation ) {
+
+	if(img){
+        this.image.src = img;
+        this.image.setAttribute('aria-expanded', 'true');
+    }
+	this.setState(true);
+
+	this.content.style.position = "relative";
+
+    if (disableAnimation) {
+        this.content.style.display = "block";
+    } else {
+        dojo.require("dojo.fx");
+        var wipeIn = dojo.fx.wipeIn({
+            node: this.content,
+            duration: 300
+        });
+        wipeIn.play();
+    }
+
+	this.label.style.position = "relative";
+	this.label.className = this.className+" opened";
+
+    if (this.maintainToggleState && (typeof IIIToggleStateArray != 'undefined')) {
+        IIIToggleStateArray[this.id]  = true;
+    }
+};

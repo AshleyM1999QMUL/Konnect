@@ -1,0 +1,12 @@
+/* CUSTOM CSS */
+/* note: .customSubHeader, .customToggle, and .customFacetHeader must be listed in this order for their values to display */
+.customPrimaryText, a:hover .customPrimaryText, body {color:#393f49;}
+.customSecondaryText {color:#000000;}
+.customLink, a {color:#0c746a;}
+.customLink:hover, a:hover {color:#0c746a;}
+.customHeader, .customRecordDetailPage .customHeader.customToggle, .customRecordDetailPage .customHeader.customToggle:hover {color:#393f49;}
+.customToggle {color:#000000;}
+.customToggle:hover {color:#000000;}
+.customFacetHeader {color:#d15c03;}
+.customHighlight {color: #000000; background-color: #cea600;}
+/* CUSTOM CSS */

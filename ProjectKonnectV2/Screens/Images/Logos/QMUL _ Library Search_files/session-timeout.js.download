@@ -1,0 +1,118 @@
+(function (window, document, $j, settings) {
+    "use strict";
+
+    var timeoutTimer = null,
+        MILLISECONDS_IN_SECOND = 1000,
+        settings = settings,
+        defaults = {
+            logoutUrl:              './',
+            keepaliveUrl:           './',
+            countdownTick:          MILLISECONDS_IN_SECOND, // 1 sec-> ms
+            sessionTimeout:         3 * 60 * MILLISECONDS_IN_SECOND, // 3 min -> ms
+            moreSessionTime:        3 * 60 * MILLISECONDS_IN_SECOND, // 3 min -> ms
+            notificationBeforeTime: 2 * 60 * MILLISECONDS_IN_SECOND, // 2 min -> ms
+            modalSel:               '.js-session-timeout',
+            modalHideCssClass:      'popup-container_hidden',
+            btnResetSessionSel:     '.js-reset-session',
+            btnEndSessionSel:       '.js-end-session',
+            countdownTimerSel:      '.js-countdown',
+            $modal:                 null
+        },
+
+        timeoutRedirect = function () {
+            document.location.href = settings.logoutUrl;
+        },
+
+        countdownTimer = function (countdownTime) {
+            var countdown           = countdownTime,
+                countdownTick       = parseInt(settings.countdownTick),
+                updateCountdownTime = function () {
+                    countdownTimer(countdown - countdownTick);
+                };
+
+            countdown = countdown < 0 ? 0 : countdown;
+
+            clearInterval(timeoutTimer);
+
+            settings.$modal.trigger("iii:timeout:countdown:update", countdown);
+
+            if (countdown === 0) {
+                timeoutRedirect();
+            } else {
+                timeoutTimer = setTimeout(updateCountdownTime, countdownTick);
+            }
+        },
+
+        openModal = function () {
+            countdownTimer(parseInt(settings.notificationBeforeTime));
+
+            settings.$modal.removeClass(settings.modalHideCssClass);
+        },
+
+        closeModal = function () {
+            settings.$modal.addClass(settings.modalHideCssClass);
+        },
+
+        resetSessionTimeout = function () {
+            var notificationTimeout = parseInt(settings.sessionTimeout) - parseInt(settings.notificationBeforeTime);
+
+            notificationTimeout = notificationTimeout < 0 ? 0 : notificationTimeout;
+
+            clearInterval(timeoutTimer);
+            timeoutTimer = setTimeout(openModal, notificationTimeout);
+        },
+
+        keepalive = function () {
+            $j.ajax(settings.keepaliveUrl);
+        },
+
+        bindEvents = function () {
+            var $btnResetSession = settings.$modal.find(settings.btnResetSessionSel),
+                $btnEndSession   = settings.$modal.find(settings.btnEndSessionSel),
+                $countdownTimer  = settings.$modal.find(settings.countdownTimerSel);
+
+            $btnResetSession.click(function () {
+                settings.sessionTimeout = settings.moreSessionTime;
+
+                closeModal();
+                keepalive();
+                resetSessionTimeout();
+            });
+
+            $btnEndSession.click(function () {
+                timeoutRedirect();
+            });
+
+            settings.$modal.on("iii:timeout:countdown:update", function (event, countdown) {
+                $countdownTimer.text(countdown / MILLISECONDS_IN_SECOND);
+            });
+        },
+
+        listenAjax = function () {
+            XMLHttpRequest.prototype.realSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.send = function(value) {
+                resetSessionTimeout();
+                this.realSend(value);
+            };
+        },
+
+        init = function () {
+            settings = $j.extend({}, defaults, settings);
+
+            settings.$modal = $j(settings.modalSel);
+
+            bindEvents();
+            listenAjax();
+            resetSessionTimeout();
+        };
+
+    $j(document).ready(function () {
+        init();
+    });
+
+    // NOTE: legacy API used for onMouseup event.
+    window.renewSession = function () {
+        resetSessionTimeout();
+    };
+
+})(window, document, $j, timeoutSettings);

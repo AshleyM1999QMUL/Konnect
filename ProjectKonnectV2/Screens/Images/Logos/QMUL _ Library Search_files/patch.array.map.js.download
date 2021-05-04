@@ -1,0 +1,4 @@
+// for bug https://jira.iii.com/browse/ENCORE-9216
+// because prototype 1.5.1 works with google books not correctly
+// NOTE This file can be deleted after updating prototype
+Array.prototype._map = Array.prototype.map;
